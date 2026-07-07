@@ -27,7 +27,7 @@
             z-index: 1;
         }
 
-        /* 📺 لۆگۆ و ناوی کەناڵ لە سەرەوەی چەپ */
+        /* 📺 لۆگۆ و ناوی کەناڵ لە سەرەوەی چەپ (قەبارەکەی گەورەتر کراوە) */
         #logo-container {
             position: absolute;
             top: 25px;
@@ -35,20 +35,20 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 6px;
+            gap: 8px;
             z-index: 10;
         }
         
         #logo-img {
-            width: 60px; 
-            height: 60px; 
-            border-radius: 12px;
+            width: 85px; /* لێرەوە قەبارەکەم گەورەتر کردووە */
+            height: 85px; 
+            border-radius: 14px;
             object-fit: cover; 
-            filter: drop-shadow(0px 4px 8px rgba(0,0,0,0.6));
+            filter: drop-shadow(0px 4px 10px rgba(0,0,0,0.7));
         }
         
         #logo-text {
-            font-size: 0.95em; 
+            font-size: 1.05em; /* ناوی کەناڵەکەش کەمێک گەورەتر کراوە بۆ ئەوەی لەگەڵ لۆگۆکە بگونجێت */
             font-weight: bold; 
             color: #ffcc00;
             text-shadow: 0 2px 6px rgba(0,0,0,0.9);
@@ -123,14 +123,12 @@
             border: 1px solid rgba(255,204,0,0.2);
         }
 
-        /* شاردنەوەی ئۆدیۆ پلەیەرەکە لەبەر ئەوەی تەنها دەنگەکیمان دەوێت لە باکگراونددا */
         #audioPlayer { display: none; }
     </style>
 </head>
 <body>
 
 <div id="app">
-    <!-- شاشەی سەرەکی بۆ دەستپێکردنی ئۆتۆماتیکی ڤیدیۆ و دەنگ پێکەوە -->
     <div id="play-overlay" onclick="startPlayer()">
         <button class="play-btn">▶️ دەستپێکردنی پەخشی SPI QURAN HD</button>
     </div>
@@ -140,13 +138,12 @@
         <div id="logo-text">SPI QURAN HD</div>
     </div>
 
-    <!-- ڤیدیۆی لایڤی حەیوانات (بە بێدەنگی لێدەدات تا تێکەڵی دەنگی قورئانەکە نەبێت) -->
+    <!-- ڤیدیۆی لایڤی حەیوانات (بێدەنگ) -->
     <video id="liveVideo" playsinline crossorigin="anonymous" muted></video>
     
     <!-- دەنگی خەتمی قورئان لە پشتەوە -->
     <audio id="audioPlayer" crossorigin="anonymous"></audio>
 
-    <!-- بەشی نیشاندانی دۆخی ئێستای خەتمەکە -->
     <div id="quran-container">
         <div class="quran-header">
             <span>📖 خەتمی قورئانی کەریم (دەنگی شێخ میشاری ڕاشد العفاسي) - بەردەوام لە باکگراوند</span>
@@ -156,9 +153,7 @@
 </div>
 
 <script>
-    // لینکی لایڤی حەیوانات
     const streamURL = 'https://live-content.xumo.com/3878/content/XM0KZ98BBZD8WF/27513672/master.m3u8';
-    // بەستەری جزءەکانی دەنگی میشاری العفاسي
     const BASE_JUZ_URL = "https://archive.org/download/misyarirasyidperjuz/Al-Quran%20Juz%20";
 
     const video = document.getElementById('liveVideo');
@@ -166,9 +161,8 @@
     const overlay = document.getElementById('play-overlay');
     const trackTitle = document.getElementById('current-track-title');
 
-    let currentJuz = 1; // لێدان لە جزءی یەکەمەوە دەستپێدەکات
+    let currentJuz = 1;
 
-    // ڕێکخستنی سیستەمی HLS بۆ ڤیدیۆی حەیوانات
     if (Hls.isSupported()) {
         const hls = new Hls();
         hls.loadSource(streamURL);
@@ -177,7 +171,6 @@
         video.src = streamURL;
     }
 
-    // فەنکشن بۆ لێدانی جزءەکان بە شێوازی Loop
     function playJuz(juzNumber) {
         currentJuz = juzNumber;
         const juzNumStr = String(juzNumber).padStart(2, '0');
@@ -191,22 +184,17 @@
         });
     }
 
-    // کاتێک کلیک لەسەر دوگمەی سەرەکی دەکرێت
     function startPlayer() {
-        video.muted = true; // ڤیدیۆی حەیوانات بێدەنگ دەبێت بۆ ئەوەی دەنگی قورئانەکە ڕوون بێت
-        
-        // لێدانی ڤیدیۆ و دەنگ پێکەوە
+        video.muted = true;
         video.play();
         playJuz(currentJuz);
-        
-        overlay.classList.add('hidden'); // شاشە ڕەشەکە لادەبات
+        overlay.classList.add('hidden');
     }
 
-    // سیستەمی LOOP: کاتێک جزءێک تەواو دەبێت، خۆی ئۆتۆماتیکی دەچێتە جزءی دواتر
     audio.onended = function() {
         currentJuz++;
         if (currentJuz > 30) {
-            currentJuz = 1; // ئەگەر گەیشتە جزءی ۳۰، دووبارە لە جزءی ۱ەوە دەستپێدەکاتەوە
+            currentJuz = 1;
         }
         playJuz(currentJuz);
     };
