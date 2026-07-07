@@ -27,7 +27,7 @@
             z-index: 1;
         }
 
-        /* 📺 لۆگۆ و ناوی کەناڵ لە سەرەوەی چەپ (بەبێ چوارگۆشە) */
+        /* 📺 لۆگۆ و ناوی کەناڵ لە سەرەوەی چەپ */
         #logo-container {
             position: absolute;
             top: 25px;
@@ -56,7 +56,7 @@
             white-space: nowrap;
         }
 
-        /* 🎧 شاشەی دەستپێکردن بۆ ڕێگەپێدانی دەنگی برۆوسەر */
+        /* 🎧 شاشەی دەستپێکردن بۆ چالاککردنی ئۆتۆپلەی */
         #play-overlay {
             position: absolute;
             inset: 0;
@@ -87,13 +87,52 @@
         .play-btn:hover {
             transform: scale(1.05);
         }
+
+        /* 📜 بەشی زانیاری خەتمی قورئان لە خوارەوە */
+        #quran-container {
+            position: absolute;
+            bottom: 20px;
+            left: 5%;
+            right: 5%;
+            z-index: 10;
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 204, 0, 0.3);
+            border-radius: 15px;
+            padding: 15px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+        }
+
+        .quran-header {
+            color: #ffcc00;
+            font-size: 1.05em;
+            font-weight: bold;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #current-track-title {
+            font-size: 0.9em;
+            color: #fff;
+            background: rgba(255,254,0,0.1);
+            padding: 3px 12px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,204,0,0.2);
+        }
+
+        /* شاردنەوەی ئۆدیۆ پلەیەرەکە لەبەر ئەوەی تەنها دەنگەکیمان دەوێت لە باکگراونددا */
+        #audioPlayer { display: none; }
     </style>
 </head>
 <body>
 
 <div id="app">
+    <!-- شاشەی سەرەکی بۆ دەستپێکردنی ئۆتۆماتیکی ڤیدیۆ و دەنگ پێکەوە -->
     <div id="play-overlay" onclick="startPlayer()">
-        <button class="play-btn">▶️ دەستپێکردنی پەخشی قورئان</button>
+        <button class="play-btn">▶️ دەستپێکردنی پەخشی SPI QURAN HD</button>
     </div>
 
     <div id="logo-container">
@@ -101,36 +140,76 @@
         <div id="logo-text">SPI QURAN HD</div>
     </div>
 
-    <video id="liveVideo" playsinline crossorigin="anonymous"></video>
+    <!-- ڤیدیۆی لایڤی حەیوانات (بە بێدەنگی لێدەدات تا تێکەڵی دەنگی قورئانەکە نەبێت) -->
+    <video id="liveVideo" playsinline crossorigin="anonymous" muted></video>
+    
+    <!-- دەنگی خەتمی قورئان لە پشتەوە -->
+    <audio id="audioPlayer" crossorigin="anonymous"></audio>
+
+    <!-- بەشی نیشاندانی دۆخی ئێستای خەتمەکە -->
+    <div id="quran-container">
+        <div class="quran-header">
+            <span>📖 خەتمی قورئانی کەریم (دەنگی شێخ میشاری ڕاشد العفاسي) - بەردەوام لە باکگراوند</span>
+            <span id="current-track-title">ئێستا: ئامادەکردن...</span>
+        </div>
+    </div>
 </div>
 
 <script>
-    // لینکی ڕاستەوخۆی دەکان قورئان کە ناردت
-    const streamURL = 'https://183.bozztv.com/giatv/giatv-dekanquran/dekanquran/chunks.m3u8';
-    const video = document.getElementById('liveVideo');
-    const overlay = document.getElementById('play-overlay');
+    // لینکی لایڤی حەیوانات
+    const streamURL = 'https://live-content.xumo.com/3878/content/XM0KZ98BBZD8WF/27513672/master.m3u8';
+    // بەستەری جزءەکانی دەنگی میشاری العفاسي
+    const BASE_JUZ_URL = "https://archive.org/download/misyarirasyidperjuz/Al-Quran%20Juz%20";
 
-    // ڕێکخستنی سیستەمی HLS بۆ لێدانی فۆرماتی m3u8
+    const video = document.getElementById('liveVideo');
+    const audio = document.getElementById('audioPlayer');
+    const overlay = document.getElementById('play-overlay');
+    const trackTitle = document.getElementById('current-track-title');
+
+    let currentJuz = 1; // لێدان لە جزءی یەکەمەوە دەستپێدەکات
+
+    // ڕێکخستنی سیستەمی HLS بۆ ڤیدیۆی حەیوانات
     if (Hls.isSupported()) {
         const hls = new Hls();
         hls.loadSource(streamURL);
         hls.attachMedia(video);
     } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        // بۆ برۆوسەری Safari (ئایفۆن و ماک) کە خۆی ڕاستەوخۆ پشتگیری دەکات
         video.src = streamURL;
     }
 
-    function startPlayer() {
-        video.muted = false; // دەنگەکە کارا دەکات
-        video.play().then(() => {
-            overlay.classList.add('hidden'); // شاشە ڕەشەکە لادەبات کاتێک لایڤەکە دەستپێدەکات
+    // فەنکشن بۆ لێدانی جزءەکان بە شێوازی Loop
+    function playJuz(juzNumber) {
+        currentJuz = juzNumber;
+        const juzNumStr = String(juzNumber).padStart(2, '0');
+        audio.src = BASE_JUZ_URL + juzNumStr + ".mp3";
+        audio.load();
+        
+        audio.play().then(() => {
+            trackTitle.innerText = 'ئێستا لێدەدات: جزء ' + juzNumber;
         }).catch(err => {
-            // ئەگەر برۆوسەرەکە کێشەی گرت، سەرەتا بە بێدەنگی لێی دەدات پاشان لۆد دەبێت
-            video.muted = true;
-            video.play();
-            overlay.classList.add('hidden');
+            console.log("Error playing audio: ", err);
         });
     }
+
+    // کاتێک کلیک لەسەر دوگمەی سەرەکی دەکرێت
+    function startPlayer() {
+        video.muted = true; // ڤیدیۆی حەیوانات بێدەنگ دەبێت بۆ ئەوەی دەنگی قورئانەکە ڕوون بێت
+        
+        // لێدانی ڤیدیۆ و دەنگ پێکەوە
+        video.play();
+        playJuz(currentJuz);
+        
+        overlay.classList.add('hidden'); // شاشە ڕەشەکە لادەبات
+    }
+
+    // سیستەمی LOOP: کاتێک جزءێک تەواو دەبێت، خۆی ئۆتۆماتیکی دەچێتە جزءی دواتر
+    audio.onended = function() {
+        currentJuz++;
+        if (currentJuz > 30) {
+            currentJuz = 1; // ئەگەر گەیشتە جزءی ۳۰، دووبارە لە جزءی ۱ەوە دەستپێدەکاتەوە
+        }
+        playJuz(currentJuz);
+    };
 </script>
 
 </body>
