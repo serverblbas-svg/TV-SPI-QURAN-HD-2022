@@ -1,1 +1,0 @@
-# TV-SPI-QURAN-HD-2022
