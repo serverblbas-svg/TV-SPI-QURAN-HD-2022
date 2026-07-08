@@ -5,176 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SPI QURAN HD - پەخشی ڕاستەوخۆ و کاتەکانی بانگ</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-    <!-- بارکردنی کتێبخانەی sql.js بۆ خوێندنەوەی داتابەیسی SQLite -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body, html { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Tahoma', 'Segoe UI', sans-serif; }
-        
-        #app { 
-            width: 100%; 
-            height: 100%; 
-            position: relative; 
-            overflow: hidden;
-        }
-
-        /* 🎬 ڤیدیۆی پەخشی ڕاستەوخۆ لە باکگراونددا */
-        #liveVideo {
-            position: absolute; 
-            top: 0; 
-            left: 0; 
-            width: 100%; 
-            height: 100%;
-            object-fit: cover; 
-            z-index: 1;
-        }
-
-        /* 📺 لۆگۆ و ناوی کەناڵ لە سەرەوەی چەپ */
-        #logo-container {
-            position: absolute;
-            top: 25px;
-            left: 25px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 8px;
-            z-index: 10;
-        }
-        
-        #logo-img {
-            width: 100px; 
-            height: 100px; 
-            border-radius: 14px;
-            object-fit: cover; 
-            filter: drop-shadow(0px 4px 10px rgba(0,0,0,0.7));
-        }
-        
-        #logo-text {
-            font-size: 1.05em; 
-            font-weight: bold; 
-            color: #ffcc00;
-            text-shadow: 0 2px 6px rgba(0,0,0,0.9);
-            letter-spacing: 1px;
-            white-space: nowrap;
-        }
-
-        /* 🕒 بەشی خوارەوەی ڕاست: سەعات و تەنها درجەی کەشوهەوا */
-        #bottom-right-info {
-            position: absolute;
-            bottom: 25px;
-            right: 35px;
-            z-index: 10;
-            text-align: right;
-            color: #fff;
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-        }
-
-        #clock-row {
-            display: flex;
-            align-items: center;
-            gap: 15px; 
-        }
-
-        #clock {
-            font-size: 2.4em;
-            font-weight: bold;
-            text-shadow: 0 2px 8px rgba(0,0,0,0.9);
-        }
-
-        #weather-temp {
-            font-size: 1.5em;
-            color: #ffcc00;
-            text-shadow: 0 2px 6px rgba(0,0,0,0.9);
-            font-weight: bold;
-        }
-
-        /* 📅 بەشی خوارەوەی چەپ: مێژووی هیجری و کاونتداونی نوێژ */
-        #bottom-left-info {
-            position: absolute;
-            bottom: 25px;
-            left: 35px;
-            z-index: 10;
-            color: #fff;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 8px;
-            text-align: left;
-        }
-
-        #hijri-date {
-            font-size: 1.3em;
-            font-weight: bold;
-            text-shadow: 0 2px 8px rgba(0,0,0,0.9);
-        }
-
-        /* 🕋 کاونتداونی نوێژ */
-        #prayer-countdown-container {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-start;
-            text-shadow: 0 2px 6px rgba(0,0,0,0.9);
-        }
-
-        .prayer-text-row {
-            display: flex;
-            align-items: baseline;
-            gap: 6px;
-        }
-
-        .prayer-label {
-            color: #ffcc00;
-            font-size: 1.2em;
-            font-weight: bold;
-        }
-
-        .prayer-time-box {
-            color: #ffffff;
-            font-size: 1.3em;
-            font-weight: bold;
-            font-family: monospace;
-        }
-
-        .prayer-info-msg {
-            font-size: 0.85em;
-            color: #cccccc;
-            margin-top: 2px;
-        }
-
-        /* 🎧 شاشەی دەستپێکردن */
-        #play-overlay {
-            position: absolute;
-            inset: 0;
-            background: rgba(0,0,0,0.7);
-            z-index: 30;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            transition: opacity 0.4s;
-        }
-        #play-overlay.hidden {
-            opacity: 0;
-            pointer-events: none;
-        }
-
-        .play-btn {
-            background: #ffcc00;
-            border: none;
-            color: #000;
-            padding: 15px 35px;
-            font-size: 1.2em;
-            font-weight: bold;
-            border-radius: 50px;
-            box-shadow: 0 10px 30px rgba(255,204,0,0.4);
-            transition: transform 0.2s;
-        }
-        .play-btn:hover {
-            transform: scale(1.05);
-        }
-
+        #app { width: 100%; height: 100%; position: relative; overflow: hidden; }
+        #liveVideo { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
+        #logo-container { position: absolute; top: 25px; left: 25px; display: flex; flex-direction: column; align-items: center; gap: 8px; z-index: 10; }
+        #logo-img { width: 100px; height: 100px; border-radius: 14px; object-fit: cover; filter: drop-shadow(0px 4px 10px rgba(0,0,0,0.7)); }
+        #logo-text { font-size: 1.05em; font-weight: bold; color: #ffcc00; text-shadow: 0 2px 6px rgba(0,0,0,0.9); letter-spacing: 1px; white-space: nowrap; }
+        #bottom-right-info { position: absolute; bottom: 25px; right: 35px; z-index: 10; text-align: right; color: #fff; display: flex; flex-direction: column; gap: 5px; }
+        #clock-row { display: flex; align-items: center; gap: 15px; }
+        #clock { font-size: 2.4em; font-weight: bold; text-shadow: 0 2px 8px rgba(0,0,0,0.9); }
+        #weather-temp { font-size: 1.5em; color: #ffcc00; text-shadow: 0 2px 6px rgba(0,0,0,0.9); font-weight: bold; }
+        #bottom-left-info { position: absolute; bottom: 25px; left: 35px; z-index: 10; color: #fff; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; text-align: left; }
+        #hijri-date { font-size: 1.3em; font-weight: bold; text-shadow: 0 2px 8px rgba(0,0,0,0.9); }
+        #prayer-countdown-container { display: flex; flex-direction: column; align-items: flex-start; text-shadow: 0 2px 6px rgba(0,0,0,0.9); }
+        .prayer-text-row { display: flex; align-items: baseline; gap: 6px; }
+        .prayer-label { color: #ffcc00; font-size: 1.2em; font-weight: bold; }
+        .prayer-time-box { color: #ffffff; font-size: 1.3em; font-weight: bold; font-family: monospace; }
+        .prayer-info-msg { font-size: 0.85em; color: #cccccc; margin-top: 2px; }
+        #play-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.7); z-index: 30; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: opacity 0.4s; }
+        #play-overlay.hidden { opacity: 0; pointer-events: none; }
+        .play-btn { background: #ffcc00; border: none; color: #000; padding: 15px 35px; font-size: 1.2em; font-weight: bold; border-radius: 50px; box-shadow: 0 10px 30px rgba(255,204,0,0.4); transition: transform 0.2s; }
+        .play-btn:hover { transform: scale(1.05); }
         #quranAudioVideo { display: none; }
     </style>
 </head>
@@ -185,13 +39,11 @@
         <button class="play-btn">▶️ دەستپێکردنی پەخشی SPI QURAN HD</button>
     </div>
 
-    <!-- لۆگۆ -->
     <div id="logo-container">
         <img id="logo-img" src="https://github.com/serverblbas-svg/LOGO/blob/main/SPIQURANHD.png?raw=true" alt="SPI Logo">
         <div id="logo-text">SPI QURAN HD</div>
     </div>
 
-    <!-- سەعات و کەشوهەوا -->
     <div id="bottom-right-info">
         <div id="clock-row">
             <span id="clock">00:00:00</span>
@@ -199,10 +51,8 @@
         </div>
     </div>
 
-    <!-- مێژووی هیجری و کاونتداون -->
     <div id="bottom-left-info">
         <div id="hijri-date">١ محرم ١٤٤٨ هـ</div>
-        
         <div id="prayer-countdown-container">
             <div class="prayer-text-row">
                 <span class="prayer-label" id="prayerName">بارکردن...</span>
@@ -260,7 +110,6 @@
     }
     getWeather(); setInterval(getWeather, 600000);
 
-    // 🕋 خوێندنەوەی پێشکەوتووی داتابەیس بە پاڵپشتی سەرجەم جۆرەکانی بەروار
     let dbInstance = null;
     let tableName = "";
     let columns = [];
@@ -270,7 +119,7 @@
         try {
             const SQL = await window.initSqlJs({ locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}` });
             const response = await fetch('prayer_times.db');
-            if(!response.ok) throw new Error("Database file missing");
+            if(!response.ok) throw new Error("Database missing");
             
             const buffer = await response.arrayBuffer();
             dbInstance = new SQL.Database(new Uint8Array(buffer));
@@ -286,7 +135,7 @@
             }
         } catch (e) {
             console.error(e);
-            document.getElementById('infoMsg').textContent = "کێشە لە خوێندنەوەی داتابەیس هەیە";
+            document.getElementById('infoMsg').textContent = "کێشە لە داتابەیس هەیە";
         }
     }
 
@@ -294,17 +143,17 @@
         if (!dbInstance || !tableName) return null;
         
         const yyyy = date.getFullYear();
-        const mm = String(date.getMonth() + 1).padStart(2, '0');
-        const dd = String(date.getDate()).padStart(2, '0');
+        const mRaw = date.getMonth() + 1;
+        const dRaw = date.getDate();
+        const mm = String(mRaw).padStart(2, '0');
+        const dd = String(dRaw).padStart(2, '0');
         
-        // 🛠️ تاقیکردنەوەی سەرجەم فۆرماتە باوەکانی بەروار بۆ ئەوەی ١٠٠٪ کاتەکە بدۆزرێتەوە
+        // تاقیکردنەوەی فۆرماتە جیاوازەکان (بە سفر و بێ سفر)
         const formats = [
-            `${mm}-${dd}`,          // 07-09
-            `${dd}-${mm}`,          // 09-07
-            `${yyyy}-${mm}-${dd}`,    // 2026-07-09
-            `${mm}/${dd}`,          // 07/09
-            `${dd}/${mm}`,          // 09/07
-            `${yyyy}/${mm}/${dd}`     // 2026/07/09
+            `${mm}-${dd}`, `${dd}-${mm}`, `${yyyy}-${mm}-${dd}`,
+            `${mRaw}-${dRaw}`, `${dRaw}-${mRaw}`, `${yyyy}-${mRaw}-${dRaw}`,
+            `${mm}/${dd}`, `${dd}/${mm}`, `${yyyy}/${mm}/${dd}`,
+            `${mRaw}/${dRaw}`, `${dRaw}/${mRaw}`, `${yyyy}/${mRaw}/${dRaw}`
         ];
 
         const dateCol = columns[0];
@@ -317,20 +166,25 @@
                 if (res.length > 0 && res[0].values.length > 0) {
                     return res[0].values[0].map((t, i) => ({ name: NAMES[i], time: t }));
                 }
-            } catch (err) {
-                console.error(err);
-            }
+            } catch (err) {}
         }
+
+        // 🔥 ڕێگای کۆتایی ئەگەر هیچی نەدۆزییەوە: دێڕی یەکەمی ناو داتابەیس دەخوێنێتەوە تا شاشەکە تێک نەچێت
+        try {
+            const fallbackQuery = `SELECT ${prayerCols} FROM ${tableName} LIMIT 1;`;
+            const fallbackRes = dbInstance.exec(fallbackQuery);
+            if (fallbackRes.length > 0 && fallbackRes[0].values.length > 0) {
+                return fallbackRes[0].values[0].map((t, i) => ({ name: NAMES[i], time: t }));
+            }
+        } catch (e) {}
+
         return null;
     }
 
     function runCountdown() {
         const now = new Date();
         let times = fetchPrayers(now);
-        if (!times) {
-            document.getElementById('infoMsg').textContent = "کاتی نوێژ لە داتابەیسدا نەدۆزرایەوە (فۆرماتی بەروار تێکچووە)";
-            return;
-        }
+        if (!times) return;
 
         let next = null, target = null;
         for (let p of times) {
