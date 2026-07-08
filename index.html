@@ -148,12 +148,11 @@
         const mm = String(mRaw).padStart(2, '0');
         const dd = String(dRaw).padStart(2, '0');
         
-        // تاقیکردنەوەی فۆرماتە جیاوازەکان (بە سفر و بێ سفر)
         const formats = [
             `${mm}-${dd}`, `${dd}-${mm}`, `${yyyy}-${mm}-${dd}`,
             `${mRaw}-${dRaw}`, `${dRaw}-${mRaw}`, `${yyyy}-${mRaw}-${dRaw}`,
             `${mm}/${dd}`, `${dd}/${mm}`, `${yyyy}/${mm}/${dd}`,
-            `${mRaw}/${dRaw}`, `${dRaw}/${mRaw}`, `${yyyy}/${mRaw}/${dRaw}`
+            `${mRaw}/${dRaw}`, `${dRaw}-${mRaw}`, `${yyyy}/${mRaw}/${dRaw}`
         ];
 
         const dateCol = columns[0];
@@ -164,21 +163,53 @@
                 const query = `SELECT ${prayerCols} FROM ${tableName} WHERE ${dateCol} = '${searchDate}' LIMIT 1;`;
                 const res = dbInstance.exec(query);
                 if (res.length > 0 && res[0].values.length > 0) {
-                    return res[0].values[0].map((t, i) => ({ name: NAMES[i], time: t }));
+                    return res[0].values[0].map((t, i) => ({ name: NAMES[i], time: String(t) }));
                 }
             } catch (err) {}
         }
 
-        // 🔥 ڕێگای کۆتایی ئەگەر هیچی نەدۆزییەوە: دێڕی یەکەمی ناو داتابەیس دەخوێنێتەوە تا شاشەکە تێک نەچێت
         try {
             const fallbackQuery = `SELECT ${prayerCols} FROM ${tableName} LIMIT 1;`;
             const fallbackRes = dbInstance.exec(fallbackQuery);
             if (fallbackRes.length > 0 && fallbackRes[0].values.length > 0) {
-                return fallbackRes[0].values[0].map((t, i) => ({ name: NAMES[i], time: t }));
+                return fallbackRes[0].values[0].map((t, i) => ({ name: NAMES[i], time: String(t) }));
             }
         } catch (e) {}
 
         return null;
+    }
+
+    // 🛠️ فەنکشنی زیرەک بۆ دەرهێنانی تەنها ژمارەی کاتەکان (چارەسەری کێشەی NAN)
+    function parseTimeString(timeStr) {
+        if (!timeStr) return null;
+        // دەرهێنانی هەموو ژمارەکان لە ناو دەقەکەدا
+        const digits = timeStr.replace(/[^0-9]/g, '');
+        
+        let hours = 0;
+        let minutes = 0;
+
+        if (digits.length >= 4) {
+            hours = parseInt(digits.substring(0, 2), 10);
+            minutes = parseInt(digits.substring(2, 4), 10);
+        } else if (digits.length === 3) {
+            hours = parseInt(digits.substring(0, 1), 10);
+            minutes = parseInt(digits.substring(1, 3), 10);
+        } else {
+            // ئەگەر فۆرماتی کاتەکە بە جیاکەرەوەی وەک خاڵ یان دووخاڵ بوو
+            const parts = timeStr.split(/[:\s\.\-\/]/);
+            if (parts.length >= 2) {
+                hours = parseInt(parts[0].replace(/[^0-9]/g, ''), 10);
+                minutes = parseInt(parts[1].replace(/[^0-9]/g, ''), 10);
+            }
+        }
+
+        // پشکنینی پاراستنی کاتەکە ئەگەر پاشگری ئێوارانی پێوە بێت
+        if (timeStr.toLowerCase().includes('pm') || timeStr.includes('م') || timeStr.includes('عصر') || timeStr.includes('مغرب') || timeStr.includes('عشا')) {
+            if (hours < 12) hours += 12;
+        }
+
+        if (isNaN(hours) || isNaN(minutes)) return null;
+        return { hours, minutes };
     }
 
     function runCountdown() {
@@ -188,9 +219,12 @@
 
         let next = null, target = null;
         for (let p of times) {
-            if(!p.time) continue;
-            const [h, m] = p.time.split(':').map(Number);
-            let t = new Date(); t.setHours(h, m, 0, 0);
+            const parsed = parseTimeString(p.time);
+            if (!parsed) continue;
+
+            let t = new Date(); 
+            t.setHours(parsed.hours, parsed.minutes, 0, 0);
+            
             if (t > now) { next = p; target = t; break; }
         }
 
@@ -199,18 +233,28 @@
             let tomTimes = fetchPrayers(tom);
             if (tomTimes && tomTimes[0]) {
                 next = tomTimes[0];
-                const [h, m] = next.time.split(':').map(Number);
-                target = new Date(); target.setDate(target.getDate() + 1); target.setHours(h, m, 0, 0);
+                const parsed = parseTimeString(next.time);
+                if (parsed) {
+                    target = new Date(); target.setDate(target.getDate() + 1); 
+                    target.setHours(parsed.hours, parsed.minutes, 0, 0);
+                }
             }
         }
 
         if (target && next) {
             const diff = Math.floor((target - now) / 1000);
-            document.getElementById('hours').textContent = String(Math.floor(diff / 3600)).padStart(2, '0');
-            document.getElementById('minutes').textContent = String(Math.floor((diff % 3600) / 60)).padStart(2, '0');
-            document.getElementById('seconds').textContent = String(diff % 60).padStart(2, '0');
+            const hrs = Math.floor(diff / 3600);
+            const mins = Math.floor((diff % 3600) / 60);
+            const secs = diff % 60;
+
+            document.getElementById('hours').textContent = String(hrs).padStart(2, '0');
+            document.getElementById('minutes').textContent = String(mins).padStart(2, '0');
+            document.getElementById('seconds').textContent = String(secs).padStart(2, '0');
+            
             document.getElementById('prayerName').textContent = "بانگی " + next.name + ":";
-            document.getElementById('infoMsg').textContent = `${Math.floor(diff / 60)} خولەک ماوە بۆ بانگی ${next.name}`;
+            
+            const totalMins = Math.floor(diff / 60);
+            document.getElementById('infoMsg').textContent = `${totalMins} خولەک ماوە بۆ بانگی ${next.name}`;
         }
     }
 
