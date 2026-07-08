@@ -257,38 +257,63 @@
     }
     getWeather(); setInterval(getWeather, 600000);
 
-    // 🕋 بەشی گرنگی خوێندنەوەی داتابەیس بۆ سەرجەم ١٢ مانگەکە
+    // 🕋 بەشی خوێندنەوەی زیرەکی دatabase بەبێ گوێدانە ناوی خشتەکان
     let dbInstance = null;
+    let tableName = "";
+    let columns = [];
     const NAMES = ["بەیانی", "ڕۆژهەڵات", "نیوەڕۆ", "عەسـر", "مەغریب", "عیشـا"];
 
     async function startDatabase() {
         try {
             const SQL = await window.initSqlJs({ locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}` });
             const response = await fetch('prayer_times.db');
+            if(!response.ok) throw new Error("فایلی داتابەیسەکە بارنەبوو");
+            
             const buffer = await response.arrayBuffer();
             dbInstance = new SQL.Database(new Uint8Array(buffer));
             
-            // ئەگەر داتابەیس بە سەرکەوتوویی باربوو، دەست بە کاونتداون دەکەین
-            setInterval(runCountdown, 1000);
-            runCountdown();
+            // 🔎 دۆزینەوەی خۆکاری ناوی خشتەکە لە ناو داتابەیس
+            let tableRes = dbInstance.exec("SELECT name FROM sqlite_master WHERE type='table';");
+            if(tableRes.length > 0) {
+                tableName = tableRes[0].values[0][0];
+                
+                // 🔎 دۆزینەوەی ناوی ستوونەکان
+                let colRes = dbInstance.exec(`PRAGMA table_info(${tableName});`);
+                columns = colRes[0].values.map(c => c[1]); // ناوی ستوونەکان دەردەکات
+                
+                console.log("خشتەی دۆزراوە:", tableName, "ستوونەکان:", columns);
+                
+                setInterval(runCountdown, 1000);
+                runCountdown();
+            } else {
+                document.getElementById('infoMsg').textContent = "هیچ خشتەیەک لە داتابەیسدا نییە";
+            }
         } catch (e) {
             console.error(e);
-            document.getElementById('infoMsg').textContent = "کێشە لە بارکردنی فایلی داتابەیس هەیە لەسەر کۆمپیوتەرەکەت (CORS)";
+            document.getElementById('infoMsg').textContent = "کێشە لە خوێندنەوەی داتابەیس هەیە";
         }
     }
 
     function fetchPrayers(date) {
-        if (!dbInstance) return null;
+        if (!dbInstance || !tableName) return null;
+        
         const mm = String(date.getMonth() + 1).padStart(2, '0');
         const dd = String(date.getDate()).padStart(2, '0');
-        const searchDate = `${mm}-${dd}`; // گەڕان بەپێی فۆرماتی داتابەیسەکەت (MM-DD)
+        const searchDate = `${mm}-${dd}`; // فۆرماتی MM-DD
 
-        const stmt = dbInstance.prepare("SELECT fajr, sunrise, dhuhr, asr, maghrib, isha FROM prayers WHERE date = :date LIMIT 1");
-        const row = stmt.getAsObject({':date': searchDate});
-        stmt.free();
-
-        if (row.fajr) {
-            return [row.fajr, row.sunrise, row.dhuhr, row.asr, row.maghrib, row.isha].map((t, i) => ({ name: NAMES[i], time: t }));
+        try {
+            // بەکارهێنانی ناوی ستوونی یەکەم (کە بەروارەکەیە) بۆ گەڕان، و هێنانی ستوونەکانی دواتر بۆ کاتەکان
+            const dateCol = columns[0];
+            const prayerCols = columns.slice(1, 7).join(", "); // ٦ ستوونی کاتەکان
+            
+            const query = `SELECT ${prayerCols} FROM ${tableName} WHERE ${dateCol} = '${searchDate}' LIMIT 1;`;
+            const res = dbInstance.exec(query);
+            
+            if (res.length > 0 && res[0].values.length > 0) {
+                return res[0].values[0].map((t, i) => ({ name: NAMES[i], time: t }));
+            }
+        } catch (err) {
+            console.error("هەڵە لە ڕێکخستنی کوێری:", err);
         }
         return null;
     }
@@ -296,19 +321,23 @@
     function runCountdown() {
         const now = new Date();
         let times = fetchPrayers(now);
-        if (!times) return;
+        if (!times) {
+            document.getElementById('infoMsg').textContent = "کاتی نوێژ بۆ ئەمڕۆ نەدۆزرایەوە";
+            return;
+        }
 
         let next = null, target = null;
         for (let p of times) {
+            if(!p.time) continue;
             const [h, m] = p.time.split(':').map(Number);
             let t = new Date(); t.setHours(h, m, 0, 0);
             if (t > now) { next = p; target = t; break; }
         }
 
-        if (!target) { // ئەگەر هەموو نوێژەکانی ئەمڕۆ ڕۆشتبوون، دەچێتە سەر یەکەم نوێژی سبەینێ
+        if (!target) { 
             const tom = new Date(); tom.setDate(tom.getDate() + 1);
             let tomTimes = fetchPrayers(tom);
-            if (tomTimes) {
+            if (tomTimes && tomTimes[0]) {
                 next = tomTimes[0];
                 const [h, m] = next.time.split(':').map(Number);
                 target = new Date(); target.setDate(target.getDate() + 1); target.setHours(h, m, 0, 0);
