@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SPI QURAN HD - پەخشی ڕاستەوخۆ و کاتەکانی بانگ</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body, html { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Tahoma', 'Segoe UI', sans-serif; }
@@ -183,13 +184,11 @@
         <button class="play-btn">▶️ دەستپێکردنی پەخشی SPI QURAN HD</button>
     </div>
 
-    <!-- لۆگۆی کەناڵ لە سەرەوەی چەپ -->
     <div id="logo-container">
         <img id="logo-img" src="https://github.com/serverblbas-svg/LOGO/blob/main/SPIQURANHD.png?raw=true" alt="SPI Logo">
         <div id="logo-text">SPI QURAN HD</div>
     </div>
 
-    <!-- لای ڕاستی خوارەوە: سەعات و تەنها درجەی کەشوهەوا پێکەوە -->
     <div id="bottom-right-info">
         <div id="clock-row">
             <span id="clock">00:00:00</span>
@@ -197,11 +196,9 @@
         </div>
     </div>
 
-    <!-- لای چەپی خوارەوە: مێژووی هیجری و سیستەمی کاونتداونی نوێژی هەولێر -->
     <div id="bottom-left-info">
         <div id="hijri-date">١ محرم ١٤٤٨ هـ</div>
         
-        <!-- کاونتداونی نوێژ -->
         <div id="prayer-countdown-container">
             <div class="prayer-text-row">
                 <span class="prayer-label" id="prayerName">...</span>
@@ -213,10 +210,8 @@
         </div>
     </div>
 
-    <!-- 🎬 ڤیدیۆی لایڤی حەیوانات (بێدەنگ) -->
     <video id="liveVideo" playsinline crossorigin="anonymous" muted></video>
     
-    <!-- 🔊 لایڤی قورئان لە باکگراونددا -->
     <video id="quranAudioVideo" playsinline crossorigin="anonymous"></video>
 </div>
 
@@ -286,121 +281,68 @@
     getWeather();
     setInterval(getWeather, 600000);
 
-    // 🕋 داتابەیسی نوێژەکەی خۆت بۆ لایڤی هەولێر
-    const PRAYER_DATABASE = {
-        5: {
-            1:  ["03:43", "05:20", "12:10", "15:53", "18:55", "20:10"],
-            2:  ["03:42", "05:19", "12:10", "15:53", "18:56", "20:11"],
-            3:  ["03:41", "05:19", "12:10", "15:53", "18:57", "20:12"],
-            4:  ["03:40", "05:18", "12:10", "15:53", "18:58", "20:13"],
-            5:  ["03:39", "05:17", "12:10", "15:53", "18:59", "20:14"],
-            6:  ["03:39", "05:16", "12:10", "15:53", "19:00", "20:15"],
-            7:  ["03:38", "05:15", "12:10", "15:56", "19:01", "20:16"],
-            8:  ["03:37", "05:14", "12:10", "15:56", "19:02", "20:17"],
-            9:  ["03:36", "05:13", "12:10", "15:56", "19:02", "20:17"],
-            10: ["03:35", "05:12", "12:10", "15:56", "19:03", "20:18"],
-            11: ["03:34", "05:11", "12:10", "15:56", "19:04", "20:19"],
-            12: ["03:33", "05:10", "12:10", "15:56", "19:04", "20:19"],
-            13: ["03:32", "05:09", "12:09", "15:56", "19:05", "20:20"],
-            14: ["03:31", "05:08", "12:09", "15:56", "19:06", "20:21"],
-            15: ["03:30", "05:07", "12:09", "15:58", "19:07", "20:22"],
-            16: ["03:29", "05:06", "12:09", "15:58", "19:08", "20:23"],
-            17: ["03:27", "05:06", "12:09", "15:58", "19:09", "20:24"],
-            18: ["03:26", "05:05", "12:09", "15:58", "19:10", "20:25"],
-            19: ["03:26", "05:05", "12:09", "15:58", "19:11", "20:26"],
-            20: ["03:26", "05:05", "12:09", "15:58", "19:12", "20:27"],
-            21: ["03:25", "05:04", "12:10", "15:58", "19:13", "20:28"],
-            22: ["03:24", "05:04", "12:10", "15:58", "19:14", "20:29"],
-            23: ["03:23", "05:03", "12:10", "15:58", "19:15", "20:30"],
-            24: ["03:23", "05:03", "12:10", "16:00", "19:15", "20:30"],
-            25: ["03:22", "05:02", "12:10", "16:00", "19:16", "20:31"],
-            26: ["03:22", "05:02", "12:11", "16:00", "19:16", "20:31"],
-            27: ["03:21", "05:01", "12:11", "16:00", "19:17", "20:32"],
-            28: ["03:21", "05:01", "12:11", "16:00", "19:17", "20:32"],
-            29: ["03:20", "05:00", "12:11", "16:00", "19:18", "20:33"],
-            30: ["03:20", "05:00", "12:11", "16:00", "19:19", "20:34"],
-            31: ["03:19", "04:59", "12:11", "16:00", "19:19", "20:34"]
-        },
-        6: {
-            1:  ["03:18", "04:59", "12:13", "16:03", "19:20", "20:35"],
-            2:  ["03:18", "04:59", "12:13", "16:03", "19:20", "20:35"],
-            3:  ["03:17", "04:58", "12:13", "16:03", "19:21", "20:36"],
-            4:  ["03:17", "04:58", "12:13", "16:03", "19:21", "20:36"],
-            5:  ["03:17", "04:58", "12:13", "16:04", "19:21", "20:36"],
-            6:  ["03:17", "04:57", "12:14", "16:04", "19:22", "20:37"],
-            7:  ["03:17", "04:57", "12:14", "16:04", "19:22", "20:37"],
-            8:  ["03:16", "04:57", "12:14", "16:04", "19:23", "20:38"],
-            9:  ["03:16", "04:58", "12:14", "16:04", "19:23", "20:38"],
-            10: ["03:15", "04:58", "12:15", "16:04", "19:24", "20:39"],
-            11: ["03:15", "04:59", "12:15", "16:04", "19:24", "20:39"],
-            12: ["03:15", "04:59", "12:15", "16:04", "19:25", "20:40"],
-            13: ["03:15", "05:00", "12:15", "16:05", "19:26", "20:41"],
-            14: ["03:15", "05:00", "12:15", "16:05", "19:26", "20:41"],
-            15: ["03:15", "05:00", "12:16", "16:05", "19:27", "20:42"],
-            16: ["03:16", "05:00", "12:16", "16:05", "19:27", "20:42"],
-            17: ["03:16", "05:00", "12:16", "16:05", "19:27", "20:42"],
-            18: ["03:16", "05:00", "12:16", "16:05", "19:28", "20:43"],
-            19: ["03:16", "05:00", "12:16", "16:05", "19:28", "20:43"],
-            20: ["03:16", "05:00", "12:16", "16:05", "19:28", "20:43"],
-            21: ["03:16", "05:00", "12:16", "16:05", "19:29", "20:44"],
-            22: ["03:17", "05:00", "12:17", "16:05", "19:29", "20:44"],
-            23: ["03:17", "05:00", "12:17", "16:05", "19:29", "20:44"],
-            24: ["03:17", "05:00", "12:17", "16:05", "19:29", "20:44"],
-            25: ["03:17", "05:00", "12:17", "16:05", "19:29", "20:44"],
-            26: ["03:18", "05:00", "12:18", "16:05", "19:29", "20:44"],
-            27: ["03:19", "05:00", "12:18", "16:05", "19:30", "20:45"],
-            28: ["03:19", "05:01", "12:18", "16:05", "19:30", "20:45"],
-            29: ["03:20", "05:01", "12:19", "16:05", "19:30", "20:45"],
-            30: ["03:20", "05:02", "12:19", "16:05", "19:30", "20:45"]
-        },
-        7: {
-            1:  ["03:20", "05:02", "12:20", "16:08", "19:29", "20:44"],
-            2:  ["03:21", "05:02", "12:20", "16:08", "19:29", "20:44"],
-            3:  ["03:21", "05:03", "12:20", "16:08", "19:29", "20:44"],
-            4:  ["03:22", "05:03", "12:20", "16:08", "19:28", "20:43"],
-            5:  ["03:22", "05:04", "12:21", "16:09", "19:28", "20:43"],
-            6:  ["03:23", "05:04", "12:21", "16:09", "19:28", "20:43"],
-            7:  ["03:23", "05:05", "12:21", "16:09", "19:28", "20:43"],
-            8:  ["03:24", "05:05", "12:22", "16:09", "19:28", "20:43"],
-            9:  ["03:24", "05:05", "12:22", "16:09", "19:28", "20:43"],
-            10: ["03:25", "05:06", "12:22", "16:09", "19:28", "20:43"],
-            11: ["03:25", "05:06", "12:22", "16:09", "19:27", "20:42"],
-            12: ["03:26", "05:07", "12:22", "16:09", "19:27", "20:42"],
-            13: ["03:27", "05:08", "12:22", "16:09", "19:26", "20:41"],
-            14: ["03:28", "05:09", "12:22", "16:09", "19:26", "20:41"],
-            15: ["03:29", "05:09", "12:22", "16:09", "19:26", "20:41"],
-            16: ["03:29", "05:10", "12:23", "16:09", "19:25", "20:40"],
-            17: ["03:30", "05:11", "12:23", "16:09", "19:25", "20:40"],
-            18: ["03:31", "05:11", "12:23", "16:10", "19:25", "20:40"],
-            19: ["03:31", "05:12", "12:23", "16:10", "19:24", "20:39"],
-            20: ["03:32", "05:14", "12:23", "16:10", "19:22", "20:37"],
-            21: ["03:33", "05:14", "12:23", "16:10", "19:22", "20:37"],
-            22: ["03:34", "05:15", "12:23", "16:10", "19:22", "20:37"],
-            23: ["03:35", "05:15", "12:23", "16:10", "19:21", "20:36"],
-            24: ["03:36", "05:16", "12:23", "16:10", "19:20", "20:35"],
-            25: ["03:36", "05:16", "12:22", "16:08", "19:19", "20:34"],
-            26: ["03:37", "05:17", "12:22", "16:07", "19:18", "20:33"],
-            27: ["03:37", "05:17", "12:22", "16:06", "19:17", "20:32"],
-            28: ["03:38", "05:18", "12:22", "16:06", "19:16", "20:31"],
-            29: ["03:38", "05:18", "12:22", "16:05", "19:15", "20:30"],
-            30: ["03:39", "05:19", "12:22", "16:05", "19:14", "20:29"],
-            31: ["03:40", "05:19", "12:22", "16:05", "19:14", "20:29"]
-        }
+    // 🕋 بەشی نوێ و بەستنەوەی فایلی prayer_times.db بۆ هێنانە دەرەوەی کاتەکان
+    const sqlConfig = {
+        locateFile: filename => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${filename}`
     };
 
+    let loadedDb = null;
     const NAMES = ["بەیانی", "ڕۆژهەڵات", "نیوەڕۆ", "عەسـر", "مەغریب", "عیشـا"];
 
-    function getPrayerTimesForDate(date) {
-        let m = date.getMonth() + 1;
-        let d = date.getDate();
-        if (!PRAYER_DATABASE[m] || !PRAYER_DATABASE[m][d]) { m = 5; d = 18; }
-        return PRAYER_DATABASE[m][d].map((time, index) => ({ name: NAMES[index], time: time }));
+    async function initDatabase() {
+        try {
+            const initSqlJs = window.initSqlJs;
+            const SQL = await initSqlJs(sqlConfig);
+            const response = await fetch('prayer_times.db');
+            const arrayBuffer = await response.arrayBuffer();
+            const uInt8Array = new Uint8Array(arrayBuffer);
+            loadedDb = new SQL.Database(uInt8Array);
+            
+            // دوای ئەوەی داتابەیسەکە بە سەرکەوتوویی باربوو، کاونتداونەکە دەستپێدەکات
+            setInterval(updateCountdown, 1000);
+            updateCountdown();
+        } catch (e) {
+            console.error("هەڵە لە بارکردنی داتابەیس:", e);
+            document.getElementById('infoMsg').textContent = "کێشە لە داتابەیس هەیە";
+        }
+    }
+
+    function getPrayerTimesFromDB(date) {
+        if (!loadedDb) return null;
+        
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const dateString = `${month}-${day}`; // فۆرماتەکە: MM-DD وەک 07-09
+
+        try {
+            // ئەگەر ناوی خشتەکە prayers بێت و ستوونی بەروار date بێت
+            const stmt = loadedDb.prepare("SELECT fajr, sunrise, dhuhr, asr, maghrib, isha FROM prayers WHERE date = :date LIMIT 1");
+            const row = stmt.getAsObject({':date': dateString});
+            stmt.free();
+
+            if (row.fajr) {
+                return [row.fajr, row.sunrise, row.dhuhr, row.asr, row.maghrib, row.isha].map((time, index) => ({
+                    name: NAMES[index],
+                    time: time
+                }));
+            }
+        } catch (err) {
+            console.error("هەڵەی پرسیارەکە:", err);
+        }
+        return null;
     }
 
     // 🕋 فەنکشنی حیسابکردنی کاونتداونی کاتەکانی بانگ
     function updateCountdown() {
+        if (!loadedDb) return;
+
         const now = new Date();
-        let todayTimes = getPrayerTimesForDate(now);
+        let todayTimes = getPrayerTimesFromDB(now);
+        
+        if (!todayTimes) {
+            document.getElementById('infoMsg').textContent = "کاتی نوێژ نەدۆزرایەوە";
+            return;
+        }
         
         let nextPrayer = null;
         let targetTime = null;
@@ -420,32 +362,36 @@
         if (!targetTime) {
             const tomorrow = new Date();
             tomorrow.setDate(tomorrow.getDate() + 1);
-            let tomorrowTimes = getPrayerTimesForDate(tomorrow);
+            let tomorrowTimes = getPrayerTimesFromDB(tomorrow);
             
-            nextPrayer = tomorrowTimes[0];
-            const [h, m] = nextPrayer.time.split(':').map(Number);
-            targetTime = new Date();
-            targetTime.setDate(targetTime.getDate() + 1);
-            targetTime.setHours(h, m, 0, 0);
+            if (tomorrowTimes) {
+                nextPrayer = tomorrowTimes[0];
+                const [h, m] = nextPrayer.time.split(':').map(Number);
+                targetTime = new Date();
+                targetTime.setDate(targetTime.getDate() + 1);
+                targetTime.setHours(h, m, 0, 0);
+            }
         }
 
-        const diffSeconds = Math.floor((targetTime - now) / 1000);
-        const hrs = Math.floor(diffSeconds / 3600);
-        const mins = Math.floor((diffSeconds % 3600) / 60);
-        const secs = diffSeconds % 60;
+        if (targetTime && nextPrayer) {
+            const diffSeconds = Math.floor((targetTime - now) / 1000);
+            const hrs = Math.floor(diffSeconds / 3600);
+            const mins = Math.floor((diffSeconds % 3600) / 60);
+            const secs = diffSeconds % 60;
 
-        document.getElementById('hours').textContent = String(hrs).padStart(2, '0');
-        document.getElementById('minutes').textContent = String(mins).padStart(2, '0');
-        document.getElementById('seconds').textContent = String(secs).padStart(2, '0');
-        
-        document.getElementById('prayerName').textContent = "بانگی " + nextPrayer.name + ":";
-        
-        const totalMins = Math.floor(diffSeconds / 60);
-        document.getElementById('infoMsg').textContent = `${totalMins} خولەک ماوە بۆ بانگی ${nextPrayer.name}`;
+            document.getElementById('hours').textContent = String(hrs).padStart(2, '0');
+            document.getElementById('minutes').textContent = String(mins).padStart(2, '0');
+            document.getElementById('seconds').textContent = String(secs).padStart(2, '0');
+            
+            document.getElementById('prayerName').textContent = "بانگی " + nextPrayer.name + ":";
+            
+            const totalMins = Math.floor(diffSeconds / 60);
+            document.getElementById('infoMsg').textContent = `${totalMins} خولەک ماوە بۆ بانگی ${nextPrayer.name}`;
+        }
     }
 
-    setInterval(updateCountdown, 1000);
-    updateCountdown();
+    // دەستپێکردنی داتابەیسەکە لەکاتی باربوونی لاپەڕەکە
+    window.onload = initDatabase;
 </script>
 
 </body>
