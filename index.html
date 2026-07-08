@@ -109,7 +109,7 @@
             text-shadow: 0 2px 8px rgba(0,0,0,0.9);
         }
 
-        /* 🕋 دیزاینی مۆدێرنی کاونتداونی نوێژ بۆ لایڤ */
+        /* 🕋 کاونتداونی نوێژ */
         #prayer-countdown-container {
             display: flex;
             flex-direction: column;
@@ -201,17 +201,16 @@
         
         <div id="prayer-countdown-container">
             <div class="prayer-text-row">
-                <span class="prayer-label" id="prayerName">...</span>
+                <span class="prayer-label" id="prayerName">بارکردن...</span>
                 <span class="prayer-time-box">
                     <span id="hours">00</span>:<span id="minutes">00</span>:<span id="seconds">00</span>
                 </span>
             </div>
-            <div class="prayer-info-msg" id="infoMsg">بارکردنی کاتەکان...</div>
+            <div class="prayer-info-msg" id="infoMsg">خەریکە کاتەکان ڕێکدەخرێن...</div>
         </div>
     </div>
 
     <video id="liveVideo" playsinline crossorigin="anonymous" muted></video>
-    
     <video id="quranAudioVideo" playsinline crossorigin="anonymous"></video>
 </div>
 
@@ -224,198 +223,109 @@
     const overlay = document.getElementById('play-overlay');
 
     if (Hls.isSupported()) {
-        const hls1 = new Hls();
-        hls1.loadSource(streamURL);
-        hls1.attachMedia(video);
-    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        const hls1 = new Hls(); hls1.loadSource(streamURL); hls1.attachMedia(video);
+        const hls2 = new Hls(); hls2.loadSource(quranURL); hls2.attachMedia(quranVideo);
+    } else {
         video.src = streamURL;
-    }
-
-    if (Hls.isSupported()) {
-        const hls2 = new Hls();
-        hls2.loadSource(quranURL);
-        hls2.attachMedia(quranVideo);
-    } else if (quranVideo.canPlayType('application/vnd.apple.mpegurl')) {
         quranVideo.src = quranURL;
     }
 
     function startPlayer() {
-        video.muted = true;       
-        quranVideo.muted = false; 
-        video.play();
-        quranVideo.play();
+        video.muted = true; quranVideo.muted = false;
+        video.play(); quranVideo.play();
         overlay.classList.add('hidden');
     }
 
-    // 🕒 فەنکشنی بەگەڕخستنی سەعات
     function updateClock() {
         const now = new Date();
-        let hours = String(now.getHours()).padStart(2, '0');
-        let minutes = String(now.getMinutes()).padStart(2, '0');
-        let seconds = String(now.getSeconds()).padStart(2, '0');
-        document.getElementById('clock').innerText = `${hours}:${minutes}:${seconds}`;
+        document.getElementById('clock').innerText = String(now.getHours()).padStart(2, '0') + ":" + String(now.getMinutes()).padStart(2, '0') + ":" + String(now.getSeconds()).padStart(2, '0');
     }
-    setInterval(updateClock, 1000);
-    updateClock();
+    setInterval(updateClock, 1000); updateClock();
 
-    // 📅 فەنکشنی مێژووی هیجری
     function updateHijriDate() {
-        const date = new Date();
         const options = { calendar: 'islamic-umalqura', day: 'numeric', month: 'long', year: 'numeric' };
-        let hijriStr = new Intl.DateTimeFormat('ar-FR-u-ca-islamic-umalqura', options).format(date);
-        document.getElementById('hijri-date').innerText = hijriStr + ' هـ';
+        document.getElementById('hijri-date').innerText = new Intl.DateTimeFormat('ar-FR-u-ca-islamic-umalqura', options).format(new Date()) + ' هـ';
     }
     updateHijriDate();
 
-    // ☀️ تەنها ڕاکێشانی پلەی گەرمی (درجەکە) بەبێ ناوی شار
     async function getWeather() {
         try {
-            const response = await fetch('https://api.open-meteo.com/v1/forecast?latitude=36.1911&longitude=44.0092&current_weather=true');
-            const data = await response.json();
-            const temp = Math.round(data.current_weather.temperature);
-            document.getElementById('weather-temp').innerText = `${temp}°C`;
-        } catch (error) {
-            document.getElementById('weather-temp').innerText = `38°C`; 
-        }
+            const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=36.1911&longitude=44.0092&current_weather=true');
+            const data = await res.json();
+            document.getElementById('weather-temp').innerText = `${Math.round(data.current_weather.temperature)}°C`;
+        } catch { document.getElementById('weather-temp').innerText = `35°C`; }
     }
-    getWeather();
-    setInterval(getWeather, 600000);
+    getWeather(); setInterval(getWeather, 600000);
 
-    // 🕋 داتابەیسی ناوخۆیی (بۆ کاتی پێویست ئەگەر داتابەیسی دەرەکی بارنەبوو)
-    const BACKUP_DATABASE = {
-        5: {
-            18: ["03:26", "05:05", "12:09", "15:58", "19:10", "20:25"],
-            19: ["03:26", "05:05", "12:09", "15:58", "19:11", "20:26"],
-            20: ["03:26", "05:05", "12:09", "15:58", "19:12", "20:27"]
-        },
-        6: {
-            1:  ["03:18", "04:59", "12:13", "16:03", "19:20", "20:35"],
-            2:  ["03:18", "04:59", "12:13", "16:03", "19:20", "20:35"]
-        },
-        7: {
-            9:  ["03:24", "05:05", "12:22", "16:09", "19:28", "20:43"]
-        }
-    };
-
-    const sqlConfig = {
-        locateFile: filename => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${filename}`
-    };
-
-    let loadedDb = null;
+    // 🕋 بەشی گرنگی خوێندنەوەی داتابەیس بۆ سەرجەم ١٢ مانگەکە
+    let dbInstance = null;
     const NAMES = ["بەیانی", "ڕۆژهەڵات", "نیوەڕۆ", "عەسـر", "مەغریب", "عیشـا"];
 
-    async function initDatabase() {
+    async function startDatabase() {
         try {
-            const initSqlJs = window.initSqlJs;
-            const SQL = await initSqlJs(sqlConfig);
+            const SQL = await window.initSqlJs({ locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}` });
             const response = await fetch('prayer_times.db');
+            const buffer = await response.arrayBuffer();
+            dbInstance = new SQL.Database(new Uint8Array(buffer));
             
-            if (response.ok) {
-                const arrayBuffer = await response.arrayBuffer();
-                const uInt8Array = new Uint8Array(arrayBuffer);
-                loadedDb = new SQL.Database(uInt8Array);
-                console.log("داتابەیسی دەرەکی بە سەرکەوتوویی بارکرا.");
-            } else {
-                console.warn("فایلی داتابەیس نەدۆزرایەوە، سیستەمی پاڵپشت بەکاردێت.");
-            }
+            // ئەگەر داتابەیس بە سەرکەوتوویی باربوو، دەست بە کاونتداون دەکەین
+            setInterval(runCountdown, 1000);
+            runCountdown();
         } catch (e) {
-            console.error("خوێندنەوەی ناوخۆیی چالاک کرا بەهۆی سنووردارکردنی وێبگەڕ (CORS).");
+            console.error(e);
+            document.getElementById('infoMsg').textContent = "کێشە لە بارکردنی فایلی داتابەیس هەیە لەسەر کۆمپیوتەرەکەت (CORS)";
         }
-        
-        // دەستپێکردنی کاونتداون لە هەموو بارودۆخێکدا
-        setInterval(updateCountdown, 1000);
-        updateCountdown();
     }
 
-    function getPrayerTimes(date) {
-        // ئەگەر داتابەیسی فەرمی (.db) بارکرابوو، لێی دەخوێنینەوە
-        if (loadedDb) {
-            const month = String(date.getMonth() + 1).padStart(2, '0');
-            const day = String(date.getDate()).padStart(2, '0');
-            const dateString = `${month}-${day}`; 
+    function fetchPrayers(date) {
+        if (!dbInstance) return null;
+        const mm = String(date.getMonth() + 1).padStart(2, '0');
+        const dd = String(date.getDate()).padStart(2, '0');
+        const searchDate = `${mm}-${dd}`; // گەڕان بەپێی فۆرماتی داتابەیسەکەت (MM-DD)
 
-            try {
-                // دەرهێنانی ستوونەکان بەپێی بەروار
-                const stmt = loadedDb.prepare("SELECT fajr, sunrise, dhuhr, asr, maghrib, isha FROM prayers WHERE date = :date LIMIT 1");
-                const row = stmt.getAsObject({':date': dateString});
-                stmt.free();
+        const stmt = dbInstance.prepare("SELECT fajr, sunrise, dhuhr, asr, maghrib, isha FROM prayers WHERE date = :date LIMIT 1");
+        const row = stmt.getAsObject({':date': searchDate});
+        stmt.free();
 
-                if (row.fajr) {
-                    return [row.fajr, row.sunrise, row.dhuhr, row.asr, row.maghrib, row.isha].map((time, index) => ({
-                        name: NAMES[index],
-                        time: time
-                    }));
-                }
-            } catch (err) {
-                console.error("هەڵە لە پرسیاری داتابەیس:", err);
-            }
+        if (row.fajr) {
+            return [row.fajr, row.sunrise, row.dhuhr, row.asr, row.maghrib, row.isha].map((t, i) => ({ name: NAMES[i], time: t }));
         }
-
-        // ئەگەر فایلی داتابەیسەکە بەردەست نەبوو، کاتەکان لە لیستی ناوخۆیی دەخوێنێتەوە
-        let m = date.getMonth() + 1;
-        let d = date.getDate();
-        
-        // ئەگەر بەروارەکە لە داتابەیسە کاتییەکە نەبوو، کاتێکی جێگیر دادەنێت تاوەکو لایڤەکە ڕانەوەستێت
-        if (!BACKUP_DATABASE[m] || !BACKUP_DATABASE[m][d]) { m = 7; d = 9; }
-        
-        return BACKUP_DATABASE[m][d].map((time, index) => ({
-            name: NAMES[index],
-            time: time
-        }));
+        return null;
     }
 
-    // 🕋 فەنکشنی حیسابکردنی کاونتداونی کاتەکانی بانگ
-    function updateCountdown() {
+    function runCountdown() {
         const now = new Date();
-        let todayTimes = getPrayerTimes(now);
-        
-        let nextPrayer = null;
-        let targetTime = null;
+        let times = fetchPrayers(now);
+        if (!times) return;
 
-        for (let prayer of todayTimes) {
-            const [h, m] = prayer.time.split(':').map(Number);
-            let t = new Date();
-            t.setHours(h, m, 0, 0);
+        let next = null, target = null;
+        for (let p of times) {
+            const [h, m] = p.time.split(':').map(Number);
+            let t = new Date(); t.setHours(h, m, 0, 0);
+            if (t > now) { next = p; target = t; break; }
+        }
 
-            if (t > now) {
-                nextPrayer = prayer;
-                targetTime = t;
-                break;
+        if (!target) { // ئەگەر هەموو نوێژەکانی ئەمڕۆ ڕۆشتبوون، دەچێتە سەر یەکەم نوێژی سبەینێ
+            const tom = new Date(); tom.setDate(tom.getDate() + 1);
+            let tomTimes = fetchPrayers(tom);
+            if (tomTimes) {
+                next = tomTimes[0];
+                const [h, m] = next.time.split(':').map(Number);
+                target = new Date(); target.setDate(target.getDate() + 1); target.setHours(h, m, 0, 0);
             }
         }
 
-        if (!targetTime) {
-            const tomorrow = new Date();
-            tomorrow.setDate(tomorrow.getDate() + 1);
-            let tomorrowTimes = getPrayerTimes(tomorrow);
-            
-            nextPrayer = tomorrowTimes[0];
-            const [h, m] = nextPrayer.time.split(':').map(Number);
-            targetTime = new Date();
-            targetTime.setDate(targetTime.getDate() + 1);
-            targetTime.setHours(h, m, 0, 0);
-        }
-
-        if (targetTime && nextPrayer) {
-            const diffSeconds = Math.floor((targetTime - now) / 1000);
-            const hrs = Math.floor(diffSeconds / 3600);
-            const mins = Math.floor((diffSeconds % 3600) / 60);
-            const secs = diffSeconds % 60;
-
-            document.getElementById('hours').textContent = String(hrs).padStart(2, '0');
-            document.getElementById('minutes').textContent = String(mins).padStart(2, '0');
-            document.getElementById('seconds').textContent = String(secs).padStart(2, '0');
-            
-            document.getElementById('prayerName').textContent = "بانگی " + nextPrayer.name + ":";
-            
-            const totalMins = Math.floor(diffSeconds / 60);
-            document.getElementById('infoMsg').textContent = `${totalMins} خولەک ماوە بۆ بانگی ${nextPrayer.name}`;
+        if (target && next) {
+            const diff = Math.floor((target - now) / 1000);
+            document.getElementById('hours').textContent = String(Math.floor(diff / 3600)).padStart(2, '0');
+            document.getElementById('minutes').textContent = String(Math.floor((diff % 3600) / 60)).padStart(2, '0');
+            document.getElementById('seconds').textContent = String(diff % 60).padStart(2, '0');
+            document.getElementById('prayerName').textContent = "بانگی " + next.name + ":";
+            document.getElementById('infoMsg').textContent = `${Math.floor(diff / 60)} خولەک ماوە بۆ بانگی ${next.name}`;
         }
     }
 
-    // دەستپێکردنی کارەکان
-    window.onload = initDatabase;
+    window.onload = startDatabase;
 </script>
-
 </body>
 </html>
