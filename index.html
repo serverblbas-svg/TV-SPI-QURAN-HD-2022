@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SPI QURAN HD - پەخشی ڕاستەوخۆ و کاتەکانی بانگ</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <!-- بارکردنی کتێبخانەی sql.js بۆ خوێندنەوەی داتابەیسی SQLite -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -184,11 +185,13 @@
         <button class="play-btn">▶️ دەستپێکردنی پەخشی SPI QURAN HD</button>
     </div>
 
+    <!-- لۆگۆ -->
     <div id="logo-container">
         <img id="logo-img" src="https://github.com/serverblbas-svg/LOGO/blob/main/SPIQURANHD.png?raw=true" alt="SPI Logo">
         <div id="logo-text">SPI QURAN HD</div>
     </div>
 
+    <!-- سەعات و کەشوهەوا -->
     <div id="bottom-right-info">
         <div id="clock-row">
             <span id="clock">00:00:00</span>
@@ -196,6 +199,7 @@
         </div>
     </div>
 
+    <!-- مێژووی هیجری و کاونتداون -->
     <div id="bottom-left-info">
         <div id="hijri-date">١ محرم ١٤٤٨ هـ</div>
         
@@ -226,8 +230,7 @@
         const hls1 = new Hls(); hls1.loadSource(streamURL); hls1.attachMedia(video);
         const hls2 = new Hls(); hls2.loadSource(quranURL); hls2.attachMedia(quranVideo);
     } else {
-        video.src = streamURL;
-        quranVideo.src = quranURL;
+        video.src = streamURL; quranVideo.src = quranURL;
     }
 
     function startPlayer() {
@@ -257,7 +260,7 @@
     }
     getWeather(); setInterval(getWeather, 600000);
 
-    // 🕋 بەشی خوێندنەوەی زیرەکی دatabase بەبێ گوێدانە ناوی خشتەکان
+    // 🕋 خوێندنەوەی پێشکەوتووی داتابەیس بە پاڵپشتی سەرجەم جۆرەکانی بەروار
     let dbInstance = null;
     let tableName = "";
     let columns = [];
@@ -267,26 +270,19 @@
         try {
             const SQL = await window.initSqlJs({ locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}` });
             const response = await fetch('prayer_times.db');
-            if(!response.ok) throw new Error("فایلی داتابەیسەکە بارنەبوو");
+            if(!response.ok) throw new Error("Database file missing");
             
             const buffer = await response.arrayBuffer();
             dbInstance = new SQL.Database(new Uint8Array(buffer));
             
-            // 🔎 دۆزینەوەی خۆکاری ناوی خشتەکە لە ناو داتابەیس
             let tableRes = dbInstance.exec("SELECT name FROM sqlite_master WHERE type='table';");
             if(tableRes.length > 0) {
                 tableName = tableRes[0].values[0][0];
-                
-                // 🔎 دۆزینەوەی ناوی ستوونەکان
                 let colRes = dbInstance.exec(`PRAGMA table_info(${tableName});`);
-                columns = colRes[0].values.map(c => c[1]); // ناوی ستوونەکان دەردەکات
-                
-                console.log("خشتەی دۆزراوە:", tableName, "ستوونەکان:", columns);
+                columns = colRes[0].values.map(c => c[1]);
                 
                 setInterval(runCountdown, 1000);
                 runCountdown();
-            } else {
-                document.getElementById('infoMsg').textContent = "هیچ خشتەیەک لە داتابەیسدا نییە";
             }
         } catch (e) {
             console.error(e);
@@ -297,23 +293,33 @@
     function fetchPrayers(date) {
         if (!dbInstance || !tableName) return null;
         
+        const yyyy = date.getFullYear();
         const mm = String(date.getMonth() + 1).padStart(2, '0');
         const dd = String(date.getDate()).padStart(2, '0');
-        const searchDate = `${mm}-${dd}`; // فۆرماتی MM-DD
+        
+        // 🛠️ تاقیکردنەوەی سەرجەم فۆرماتە باوەکانی بەروار بۆ ئەوەی ١٠٠٪ کاتەکە بدۆزرێتەوە
+        const formats = [
+            `${mm}-${dd}`,          // 07-09
+            `${dd}-${mm}`,          // 09-07
+            `${yyyy}-${mm}-${dd}`,    // 2026-07-09
+            `${mm}/${dd}`,          // 07/09
+            `${dd}/${mm}`,          // 09/07
+            `${yyyy}/${mm}/${dd}`     // 2026/07/09
+        ];
 
-        try {
-            // بەکارهێنانی ناوی ستوونی یەکەم (کە بەروارەکەیە) بۆ گەڕان، و هێنانی ستوونەکانی دواتر بۆ کاتەکان
-            const dateCol = columns[0];
-            const prayerCols = columns.slice(1, 7).join(", "); // ٦ ستوونی کاتەکان
-            
-            const query = `SELECT ${prayerCols} FROM ${tableName} WHERE ${dateCol} = '${searchDate}' LIMIT 1;`;
-            const res = dbInstance.exec(query);
-            
-            if (res.length > 0 && res[0].values.length > 0) {
-                return res[0].values[0].map((t, i) => ({ name: NAMES[i], time: t }));
+        const dateCol = columns[0];
+        const prayerCols = columns.slice(1, 7).join(", ");
+
+        for (let searchDate of formats) {
+            try {
+                const query = `SELECT ${prayerCols} FROM ${tableName} WHERE ${dateCol} = '${searchDate}' LIMIT 1;`;
+                const res = dbInstance.exec(query);
+                if (res.length > 0 && res[0].values.length > 0) {
+                    return res[0].values[0].map((t, i) => ({ name: NAMES[i], time: t }));
+                }
+            } catch (err) {
+                console.error(err);
             }
-        } catch (err) {
-            console.error("هەڵە لە ڕێکخستنی کوێری:", err);
         }
         return null;
     }
@@ -322,7 +328,7 @@
         const now = new Date();
         let times = fetchPrayers(now);
         if (!times) {
-            document.getElementById('infoMsg').textContent = "کاتی نوێژ بۆ ئەمڕۆ نەدۆزرایەوە";
+            document.getElementById('infoMsg').textContent = "کاتی نوێژ لە داتابەیسدا نەدۆزرایەوە (فۆرماتی بەروار تێکچووە)";
             return;
         }
 
