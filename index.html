@@ -146,7 +146,6 @@
         return null;
     }
 
-    // 🛠️ لێرەدا سیستەمی لێکدانەوەی کاتی داتابەیسەکەمان بە تەواو بنبڕی چاککرد
     function parseTimeString(timeStr, index) {
         if (!timeStr) return null;
         const clean = timeStr.replace(/[^0-9]/g, '');
@@ -163,13 +162,10 @@
             }
         }
 
-        // ڕێکخستنی کاتەکان بە شێوازی دەقیقی ١٢ و ٢٤ سەعاتی بۆ ئەوەی باز نەدات
-        // ئەگەر نوێژی نیوەڕۆ، عەسر، مەغریب، یان عیشا بوو و کاتەکەی کەمتر بوو لە ١٢، دەبێت ١٢ی بخرێتە سەر (بۆ نموونە عەسر 03:30 دەبێتە 15:30)
         if (index >= 2 && hours < 12) {
-            if (index === 2 && hours === 11) { /* نیوەڕۆ پێش سەعات ١٢ */ } else { hours += 12; }
+            if (index === 2 && hours === 11) { } else { hours += 12; }
         }
         
-        // بۆ کاتەکانی بەیانی و ڕۆژهەڵات (index 0 YAN 1) دڵنیا دەبینەوە کە ناچێتە سەر کاتی ئێوارە
         if ((index === 0 || index === 1) && hours >= 12) {
             hours -= 12; 
         }
@@ -184,6 +180,7 @@
 
         let next = null, target = null;
         
+        // 🛠️ لێرەدا کۆدەکەمان دەستکاری کرد بۆ ئەوەی لە دوای نیوەشەو ڕاستەوخۆ بڕواتە سەر ڕۆژهەڵاتن نەک بەیانی
         for (let i = 0; i < times.length; i++) {
             let p = times[i];
             const parsed = parseTimeString(p.time, i);
@@ -191,6 +188,11 @@
             
             let t = new Date(); 
             t.setHours(parsed.hours, parsed.minutes, 0, 0);
+            
+            // ئەگەر کاتی ئێستا دوای نیوەشەو بوو (سەعات 00:00 تا کاتی ڕۆژهەڵاتن) و نوێژەکە "بەیانی" بوو (index == 0)، پشتگوێی دەخات و باز دەداتە سەر ڕۆژهەڵاتن
+            if (now.getHours() < 6 && i === 0) {
+                continue; 
+            }
             
             if (t > now) { 
                 next = p; 
@@ -218,7 +220,6 @@
             const m = Math.floor((diff % 3600) / 60);
             const s = diff % 60;
 
-            // نیشاندانی ژمارەکان لە سەر شاشەکە بە فۆرماتی دروست (01:27)
             document.getElementById('hours').textContent = String(h).padStart(2, '0');
             document.getElementById('minutes').textContent = String(m).padStart(2, '0');
             document.getElementById('seconds').textContent = String(s).padStart(2, '0');
