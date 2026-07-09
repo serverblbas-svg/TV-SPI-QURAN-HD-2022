@@ -4,31 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SPI QURAN HD - پەخشی ڕاستەوخۆ و کاتەکانی بانگ</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/sql-wasm.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body, html { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Tahoma', 'Segoe UI', sans-serif; }
         #app { width: 100%; height: 100%; position: relative; overflow: hidden; }
-        #liveVideo { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1; }
-        #logo-container { position: absolute; top: 25px; left: 25px; display: flex; flex-direction: column; align-items: center; gap: 8px; z-index: 10; }
-        #logo-img { width: 100px; height: 100px; border-radius: 14px; object-fit: cover; filter: drop-shadow(0px 4px 10px rgba(0,0,0,0.7)); }
-        #logo-text { font-size: 1.05em; font-weight: bold; color: #ffcc00; text-shadow: 0 2px 6px rgba(0,0,0,0.9); letter-spacing: 1px; white-space: nowrap; }
-        #bottom-right-info { position: absolute; bottom: 25px; right: 35px; z-index: 10; text-align: right; color: #fff; display: flex; flex-direction: column; gap: 5px; }
+        
+        #bottom-right-info { position: absolute; bottom: 25px; right: 35px; z-index: 50; text-align: right; color: #fff; display: flex; flex-direction: column; gap: 5px; }
         #clock-row { display: flex; align-items: center; gap: 15px; }
         #clock { font-size: 2.4em; font-weight: bold; text-shadow: 0 2px 8px rgba(0,0,0,0.9); }
         #weather-temp { font-size: 1.5em; color: #ffcc00; text-shadow: 0 2px 6px rgba(0,0,0,0.9); font-weight: bold; }
-        #bottom-left-info { position: absolute; bottom: 25px; left: 35px; z-index: 10; color: #fff; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; text-align: left; }
+
+        #bottom-left-info { position: absolute; bottom: 25px; left: 35px; z-index: 50; color: #fff; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; text-align: left; }
         #hijri-date { font-size: 1.3em; font-weight: bold; text-shadow: 0 2px 8px rgba(0,0,0,0.9); }
         #prayer-countdown-container { display: flex; flex-direction: column; align-items: flex-start; text-shadow: 0 2px 6px rgba(0,0,0,0.9); }
         .prayer-text-row { display: flex; align-items: baseline; gap: 6px; }
         .prayer-label { color: #ffcc00; font-size: 1.2em; font-weight: bold; }
         .prayer-time-box { color: #ffffff; font-size: 1.3em; font-weight: bold; font-family: monospace; }
         .prayer-info-msg { font-size: 0.85em; color: #cccccc; margin-top: 2px; }
-        #play-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.7); z-index: 30; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: opacity 0.4s; }
+
+        #play-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.7); z-index: 99999999; display: flex; justify-content: center; align-items: center; cursor: pointer; transition: opacity 0.4s; }
         #play-overlay.hidden { opacity: 0; pointer-events: none; }
         .play-btn { background: #ffcc00; border: none; color: #000; padding: 15px 35px; font-size: 1.2em; font-weight: bold; border-radius: 50px; box-shadow: 0 10px 30px rgba(255,204,0,0.4); transition: transform 0.2s; }
-        .play-btn:hover { transform: scale(1.05); }
         #quranAudioVideo { display: none; }
     </style>
 </head>
@@ -39,10 +38,14 @@
         <button class="play-btn">▶️ دەستپێکردنی پەخشی SPI QURAN HD</button>
     </div>
 
-    <div id="logo-container">
-        <img id="logo-img" src="https://github.com/serverblbas-svg/LOGO/blob/main/SPIQURANHD.png?raw=true" alt="SPI Logo">
-        <div id="logo-text">SPI QURAN HD</div>
-    </div>
+    <header id="header" class="px-4 md:px-10 lg:px-16 py-3 md:py-5 flex w-full items-center justify-between z-[9999999] fixed top-0 left-0 transition-all duration-300">
+        <div class="w-full md:w-2/3 lg:w-1/2 xl:w-1/3 logo text-2xl md:text-4xl lg:text-4xl font-bold text-white">SPI QURAN HD</div>
+    </header>
+
+    <section class="main w-full h-screen relative">
+        <video id="liveVideo" class="hero w-full h-full object-cover" src="https://a.top4top.io/m_3841gzr7v1.mp4" type="video/mp4" autoplay loop muted playsinline></video>
+        <div class="absolute flex items-center justify-center w-full h-full top-0 left-0 px-5 z-40 bg-black/30"></div>
+    </section>
 
     <div id="bottom-right-info">
         <div id="clock-row">
@@ -55,32 +58,28 @@
         <div id="hijri-date">١ محرم ١٤٤٨ هـ</div>
         <div id="prayer-countdown-container">
             <div class="prayer-text-row">
-                <span class="prayer-label" id="prayerName">بارکردن...</span>
+                <span class="prayer-label" id="prayerName">...</span>
                 <span class="prayer-time-box">
                     <span id="hours">00</span>:<span id="minutes">00</span>:<span id="seconds">00</span>
                 </span>
             </div>
-            <div class="prayer-info-msg" id="infoMsg">خەریکە کاتەکان ڕێکدەخرێن...</div>
+            <div class="prayer-info-msg" id="infoMsg">بارکردنی کاتەکان...</div>
         </div>
     </div>
 
-    <video id="liveVideo" playsinline crossorigin="anonymous" muted></video>
     <video id="quranAudioVideo" playsinline crossorigin="anonymous"></video>
 </div>
 
 <script>
-    const streamURL = 'https://live-content.xumo.com/3878/content/XM0KZ98BBZD8WF/27513672/1.m3u8';
     const quranURL = 'https://win.holol.com/live/quran/chunklist_w1767678011.m3u8';
-
     const video = document.getElementById('liveVideo');
     const quranVideo = document.getElementById('quranAudioVideo');
     const overlay = document.getElementById('play-overlay');
 
     if (Hls.isSupported()) {
-        const hls1 = new Hls(); hls1.loadSource(streamURL); hls1.attachMedia(video);
-        const hls2 = new Hls(); hls2.loadSource(quranURL); hls2.attachMedia(quranVideo);
-    } else {
-        video.src = streamURL; quranVideo.src = quranURL;
+        const hls = new Hls(); hls.loadSource(quranURL); hls.attachMedia(quranVideo);
+    } else if (quranVideo.canPlayType('application/vnd.apple.mpegurl')) {
+        quranVideo.src = quranURL;
     }
 
     function startPlayer() {
@@ -103,139 +102,93 @@
 
     async function getWeather() {
         try {
-            const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=36.1911&longitude=44.0092&current_weather=true');
-            const data = await res.json();
+            const response = await fetch('https://api.open-meteo.com/v1/forecast?latitude=36.1911&longitude=44.0092&current_weather=true');
+            const data = await response.json();
             document.getElementById('weather-temp').innerText = `${Math.round(data.current_weather.temperature)}°C`;
         } catch { document.getElementById('weather-temp').innerText = `35°C`; }
     }
     getWeather(); setInterval(getWeather, 600000);
 
+    // 🕋 خوێندنەوەی داتابەیسی دەرەکی بەپێی پێکهاتەی خشتەی erbil
     let dbInstance = null;
-    let tableName = "";
-    let columns = [];
     const NAMES = ["بەیانی", "ڕۆژهەڵات", "نیوەڕۆ", "عەسـر", "مەغریب", "عیشـا"];
 
     async function startDatabase() {
         try {
             const SQL = await window.initSqlJs({ locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}` });
             const response = await fetch('prayer_times.db');
-            if(!response.ok) throw new Error("Database missing");
-            
+            if(!response.ok) throw new Error("Database file missing");
             const buffer = await response.arrayBuffer();
             dbInstance = new SQL.Database(new Uint8Array(buffer));
             
-            let tableRes = dbInstance.exec("SELECT name FROM sqlite_master WHERE type='table';");
-            if(tableRes.length > 0) {
-                tableName = tableRes[0].values[0][0];
-                let colRes = dbInstance.exec(`PRAGMA table_info(${tableName});`);
-                columns = colRes[0].values.map(c => c[1]);
-                
-                setInterval(runCountdown, 1000);
-                runCountdown();
-            }
+            setInterval(runCountdown, 1000);
+            runCountdown();
         } catch (e) {
             console.error(e);
-            document.getElementById('infoMsg').textContent = "کێشە لە داتابەیس هەیە";
+            document.getElementById('infoMsg').textContent = "کێشە لە بارکردنی داتابەیس هەیە";
         }
     }
 
-    function fetchPrayers(date) {
-        if (!dbInstance || !tableName) return null;
-        
-        const yyyy = date.getFullYear();
-        const mRaw = date.getMonth() + 1;
-        const dRaw = date.getDate();
-        const mm = String(mRaw).padStart(2, '0');
-        const dd = String(dRaw).padStart(2, '0');
-        
-        const formats = [
-            `${mm}-${dd}`, `${dd}-${mm}`, `${yyyy}-${mm}-${dd}`,
-            `${mRaw}-${dRaw}`, `${dRaw}-${mRaw}`, `${yyyy}-${mRaw}-${dRaw}`,
-            `${mm}/${dd}`, `${dd}/${mm}`, `${yyyy}/${mm}/${dd}`,
-            `${mRaw}/${dRaw}`, `${dRaw}-${mRaw}`, `${yyyy}/${mRaw}/${dRaw}`
-        ];
-
-        const dateCol = columns[0];
-        const prayerCols = columns.slice(1, 7).join(", ");
-
-        for (let searchDate of formats) {
-            try {
-                const query = `SELECT ${prayerCols} FROM ${tableName} WHERE ${dateCol} = '${searchDate}' LIMIT 1;`;
-                const res = dbInstance.exec(query);
-                if (res.length > 0 && res[0].values.length > 0) {
-                    return res[0].values[0].map((t, i) => ({ name: NAMES[i], time: String(t) }));
-                }
-            } catch (err) {}
-        }
+    function getPrayersFromDB(date) {
+        if (!dbInstance) return null;
+        const m = date.getMonth() + 1;
+        const d = date.getDate();
 
         try {
-            const fallbackQuery = `SELECT ${prayerCols} FROM ${tableName} LIMIT 1;`;
-            const fallbackRes = dbInstance.exec(fallbackQuery);
-            if (fallbackRes.length > 0 && fallbackRes[0].values.length > 0) {
-                return fallbackRes[0].values[0].map((t, i) => ({ name: NAMES[i], time: String(t) }));
+            // گەڕان بەپێی مانگ و ڕۆژ لە خشتەی erbil
+            const query = `SELECT time FROM erbil WHERE CAST(month AS INTEGER) = ${m} AND CAST(day AS INTEGER) = ${d} LIMIT 1;`;
+            const res = dbInstance.exec(query);
+            
+            if (res.length > 0 && res[0].values.length > 0) {
+                const timeRaw = res[0].values[0][0];
+                // جیاکردنەوەی کاتەکان ئەگەر بە کۆما یان خاڵی کۆما یان بۆشایی جیاکرابێتنەوە
+                const timesArray = timeRaw.split(/[\s,;\t]+/).filter(t => t.trim().length > 0);
+                
+                return timesArray.slice(0, 6).map((t, i) => ({ name: NAMES[i], time: t }));
             }
-        } catch (e) {}
-
+        } catch (err) { console.error(err); }
         return null;
     }
 
-    // 🛠️ فەنکشنی زیرەک بۆ دەرهێنانی تەنها ژمارەی کاتەکان (چارەسەری کێشەی NAN)
     function parseTimeString(timeStr) {
         if (!timeStr) return null;
-        // دەرهێنانی هەموو ژمارەکان لە ناو دەقەکەدا
-        const digits = timeStr.replace(/[^0-9]/g, '');
-        
-        let hours = 0;
-        let minutes = 0;
+        const clean = timeStr.replace(/[^0-9]/g, '');
+        let hours = 0, minutes = 0;
 
-        if (digits.length >= 4) {
-            hours = parseInt(digits.substring(0, 2), 10);
-            minutes = parseInt(digits.substring(2, 4), 10);
-        } else if (digits.length === 3) {
-            hours = parseInt(digits.substring(0, 1), 10);
-            minutes = parseInt(digits.substring(1, 3), 10);
+        if (clean.length >= 4) {
+            hours = parseInt(clean.substring(0, 2), 10);
+            minutes = parseInt(clean.substring(2, 4), 10);
         } else {
-            // ئەگەر فۆرماتی کاتەکە بە جیاکەرەوەی وەک خاڵ یان دووخاڵ بوو
-            const parts = timeStr.split(/[:\s\.\-\/]/);
+            const parts = timeStr.split(/[:\.]/);
             if (parts.length >= 2) {
                 hours = parseInt(parts[0].replace(/[^0-9]/g, ''), 10);
                 minutes = parseInt(parts[1].replace(/[^0-9]/g, ''), 10);
             }
         }
-
-        // پشکنینی پاراستنی کاتەکە ئەگەر پاشگری ئێوارانی پێوە بێت
-        if (timeStr.toLowerCase().includes('pm') || timeStr.includes('م') || timeStr.includes('عصر') || timeStr.includes('مغرب') || timeStr.includes('عشا')) {
-            if (hours < 12) hours += 12;
-        }
-
-        if (isNaN(hours) || isNaN(minutes)) return null;
         return { hours, minutes };
     }
 
     function runCountdown() {
         const now = new Date();
-        let times = fetchPrayers(now);
+        let times = getPrayersFromDB(now);
         if (!times) return;
 
         let next = null, target = null;
         for (let p of times) {
             const parsed = parseTimeString(p.time);
             if (!parsed) continue;
-
-            let t = new Date(); 
-            t.setHours(parsed.hours, parsed.minutes, 0, 0);
-            
+            let t = new Date(); t.setHours(parsed.hours, parsed.minutes, 0, 0);
             if (t > now) { next = p; target = t; break; }
         }
 
-        if (!target) { 
+        if (!target) {
             const tom = new Date(); tom.setDate(tom.getDate() + 1);
-            let tomTimes = fetchPrayers(tom);
+            let tomTimes = getPrayersFromDB(tom);
             if (tomTimes && tomTimes[0]) {
                 next = tomTimes[0];
                 const parsed = parseTimeString(next.time);
                 if (parsed) {
-                    target = new Date(); target.setDate(target.getDate() + 1); 
+                    target = new Date(); target.setDate(target.getDate() + 1);
                     target.setHours(parsed.hours, parsed.minutes, 0, 0);
                 }
             }
@@ -243,18 +196,11 @@
 
         if (target && next) {
             const diff = Math.floor((target - now) / 1000);
-            const hrs = Math.floor(diff / 3600);
-            const mins = Math.floor((diff % 3600) / 60);
-            const secs = diff % 60;
-
-            document.getElementById('hours').textContent = String(hrs).padStart(2, '0');
-            document.getElementById('minutes').textContent = String(mins).padStart(2, '0');
-            document.getElementById('seconds').textContent = String(secs).padStart(2, '0');
-            
+            document.getElementById('hours').textContent = String(Math.floor(diff / 3600)).padStart(2, '0');
+            document.getElementById('minutes').textContent = String(Math.floor((diff % 3600) / 60)).padStart(2, '0');
+            document.getElementById('seconds').textContent = String(diff % 60).padStart(2, '0');
             document.getElementById('prayerName').textContent = "بانگی " + next.name + ":";
-            
-            const totalMins = Math.floor(diff / 60);
-            document.getElementById('infoMsg').textContent = `${totalMins} خولەک ماوە بۆ بانگی ${next.name}`;
+            document.getElementById('infoMsg').textContent = `${Math.floor(diff / 60)} خولەک ماوە بۆ بانگی ${next.name}`;
         }
     }
 
