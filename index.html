@@ -146,7 +146,8 @@
         return null;
     }
 
-    function parseTimeString(timeStr) {
+    // لێرەدا فۆرماتی کاتەکان بە تەواوی بەپێی کاتژمێری ٢٤ی ڕێکدەخرێنەوە تا هیچ کاتێک باز نەدات
+    function parseTimeString(timeStr, index) {
         if (!timeStr) return null;
         const clean = timeStr.replace(/[^0-9]/g, '');
         let hours = 0, minutes = 0;
@@ -161,6 +162,12 @@
                 minutes = parseInt(parts[1].replace(/[^0-9]/g, ''), 10);
             }
         }
+
+        // چارەسەری کێشەی فۆرماتی کاتەکانی دوای نیوەڕۆ لە ناو داتابەیسەکەدا
+        if (index >= 2 && hours < 12) { 
+            if (index === 2 && hours === 11) { } else { hours += 12; }
+        }
+        
         return { hours, minutes };
     }
 
@@ -170,19 +177,31 @@
         if (!times) return;
 
         let next = null, target = null;
-        for (let p of times) {
-            const parsed = parseTimeString(p.time);
+        
+        // پشکنینی هەموو کاتەکانی نوێژی ئەمڕۆ بەدوای یەکدا
+        for (let i = 0; i < times.length; i++) {
+            let p = times[i];
+            const parsed = parseTimeString(p.time, i);
             if (!parsed) continue;
-            let t = new Date(); t.setHours(parsed.hours, parsed.minutes, 0, 0);
-            if (t > now) { next = p; target = t; break; }
+            
+            let t = new Date(); 
+            t.setHours(parsed.hours, parsed.minutes, 0, 0);
+            
+            // ئەگەر کاتەکە لە کاتی ئێستا گەورەتر بوو، واتا ئەمە نوێژی داهاتووە
+            if (t > now) { 
+                next = p; 
+                target = t; 
+                break; 
+            }
         }
 
+        // ئەگەر نوێژی عیشای ئەمڕۆش تێپەڕی بوو، دەچێتە سەر بەیانی سبەینێ
         if (!target) {
             const tom = new Date(); tom.setDate(tom.getDate() + 1);
             let tomTimes = getPrayersFromDB(tom);
             if (tomTimes && tomTimes[0]) {
                 next = tomTimes[0];
-                const parsed = parseTimeString(next.time);
+                const parsed = parseTimeString(next.time, 0);
                 if (parsed) {
                     target = new Date(); target.setDate(target.getDate() + 1);
                     target.setHours(parsed.hours, parsed.minutes, 0, 0);
@@ -192,11 +211,22 @@
 
         if (target && next) {
             const diff = Math.floor((target - now) / 1000);
-            document.getElementById('hours').textContent = String(Math.floor(diff / 3600)).padStart(2, '0');
-            document.getElementById('minutes').textContent = String(Math.floor((diff % 3600) / 60)).padStart(2, '0');
-            document.getElementById('seconds').textContent = String(diff % 60).padStart(2, '0');
+            const h = Math.floor(diff / 3600);
+            const m = Math.floor((diff % 3600) / 60);
+            const s = diff % 60;
+
+            document.getElementById('hours').textContent = String(h).padStart(2, '0');
+            document.getElementById('minutes').textContent = String(m).padStart(2, '0');
+            document.getElementById('seconds').textContent = String(s).padStart(2, '0');
+            
             document.getElementById('prayerName').textContent = "بانگی " + next.name + ":";
-            document.getElementById('infoMsg').textContent = `${Math.floor(diff / 60)} خولەک ماوە بۆ بانگی ${next.name}`;
+            
+            // دروستکردنی دەقی ڕوونکەرەوە بەپێی کاتی ماوە
+            if (h > 0) {
+                document.getElementById('infoMsg').textContent = `${h} سەعات و ${m} خولەک ماوە بۆ بانگی ${next.name}`;
+            } else {
+                document.getElementById('infoMsg').textContent = `${m} خولەک ماوە بۆ بانگی ${next.name}`;
+            }
         }
     }
 
