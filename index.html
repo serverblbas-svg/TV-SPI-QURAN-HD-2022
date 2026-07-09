@@ -110,7 +110,7 @@
     getWeather(); setInterval(getWeather, 600000);
 
     let dbInstance = null;
-    const NAMES = ["بەیانی", "ڕۆژهەڵات", "نیوەڕۆ", "عەسـر", "مەغریب", "عیشـا"];
+    const NAMES = ["بانگی بەیانی", "خۆرهەڵاتن", "بانگی نیوەڕۆ", "بانگی عەسر", "بانگی ئێوارە", "بانگی خەوتنان"];
 
     async function startDatabase() {
         try {
@@ -146,6 +146,7 @@
         return null;
     }
 
+    // چارەسەری کۆتایی بۆ ڕێکخستنی کاتەکان وەکو وێنەکە
     function parseTimeString(timeStr, index) {
         if (!timeStr) return null;
         const clean = timeStr.replace(/[^0-9]/g, '');
@@ -162,12 +163,13 @@
             }
         }
 
-        if (index >= 2 && hours < 12) {
-            if (index === 2 && hours === 11) { } else { hours += 12; }
+        // عەسر، ئێوارە، و خەوتنان دەبێت بە سیستەمی 24 کاتژمێری حیساب بکرێن تا بە دروستی کار بکات
+        if (index >= 3 && hours < 12) {
+            hours += 12;
         }
-        
-        if ((index === 0 || index === 1) && hours >= 12) {
-            hours -= 12; 
+        // بۆ نیوەڕۆ
+        if (index === 2 && hours < 12 && hours !== 11) {
+            hours += 12; 
         }
 
         return { hours, minutes };
@@ -180,7 +182,7 @@
 
         let next = null, target = null;
         
-        // 🛠️ لێرەدا کۆدەکەمان دەستکاری کرد بۆ ئەوەی لە دوای نیوەشەو ڕاستەوخۆ بڕواتە سەر ڕۆژهەڵاتن نەک بەیانی
+        // 🛠️ لێرەدا کۆدەکە بە تەواوی ئۆتۆماتیکییە: سەیری کاتی ئێستا دەکات بەراورد بە کاتی نوێژەکان
         for (let i = 0; i < times.length; i++) {
             let p = times[i];
             const parsed = parseTimeString(p.time, i);
@@ -189,11 +191,7 @@
             let t = new Date(); 
             t.setHours(parsed.hours, parsed.minutes, 0, 0);
             
-            // ئەگەر کاتی ئێستا دوای نیوەشەو بوو (سەعات 00:00 تا کاتی ڕۆژهەڵاتن) و نوێژەکە "بەیانی" بوو (index == 0)، پشتگوێی دەخات و باز دەداتە سەر ڕۆژهەڵاتن
-            if (now.getHours() < 6 && i === 0) {
-                continue; 
-            }
-            
+            // هەر کاتێک نوێژێک کاتەکەی گەورەتر بوو لە ئێستا (واتە هێشتا نەهاتووە)، دەبێتە ئامانج
             if (t > now) { 
                 next = p; 
                 target = t; 
@@ -201,6 +199,7 @@
             }
         }
 
+        // ئەگەر نوێژی خەوتنانیش تێپەڕی بوو، خۆی ئۆتۆماتیکی دەچێتە سەر بەیانی ڕۆژی دواتر
         if (!target) {
             const tom = new Date(); tom.setDate(tom.getDate() + 1);
             let tomTimes = getPrayersFromDB(tom);
