@@ -57,14 +57,14 @@
     </section>
 
     <div id="bottom-right-info">
+        <div id="hijri-date">--</div>
         <div id="clock-row">
             <span id="clock">00:00:00</span>
-            <span id="weather-temp">--°C</span>
+            <span id="weather-temp">-Erbil-°C</span>
         </div>
     </div>
 
-    <div id="bottom-left-info">
-        <div id="hijri-date">--</div>
+    <div id="bottom-left-info">  
         <div id="prayer-countdown-container">
             <div class="prayer-text-row">
                 <span class="prayer-label" id="prayerName">...</span>
@@ -645,7 +645,7 @@
                 year: 'numeric'
             });
             const hijriDate = formatter.format(now);
-            hijriElement.innerText = hijriDate + ' هـ';
+            hijriElement.innerText = hijriDate + ' ';
         } catch (e) {
             try {
                 const formatter = new Intl.DateTimeFormat('ar-u-ca-islamic', {
@@ -683,7 +683,7 @@
     setInterval(updateAll, 1000);
     updateAll();
     getWeather();
-    setInterval(getWeather, 600000);
+    setInterval(getWeather, 300000);
 
     // Update when page becomes visible again
     document.addEventListener('visibilitychange', function() {
