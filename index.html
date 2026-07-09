@@ -152,7 +152,7 @@
     function updateHijriDate() {
         try {
             const options = { calendar: 'islamic-umalqura', day: 'numeric', month: 'long', year: 'numeric' };
-            document.getElementById('hijri-date').innerText = new Intl.DateTimeFormat('ar-FR-u-ca-islamic-umalqura', options).format(new Date()) + ' هـ';
+            document.getElementById('hijri-date').innerText = new Intl.DateTimeFormat('ar-FR-u-ca-islamic-umalqura', options).format(new Date()) + ' ';
         } catch (e) {
             document.getElementById('hijri-date').innerText = '١ محرم ١٤٤٨ هـ';
         }
