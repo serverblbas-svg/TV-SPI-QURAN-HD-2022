@@ -11,7 +11,7 @@
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body, html { width: 100%; height: 100%; overflow: hidden; background: #000; font-family: 'Tahoma', 'Segoe UI', sans-serif; }
         #app { width: 100%; height: 100%; position: relative; overflow: hidden; }
-        
+
         #bottom-right-info { position: absolute; bottom: 25px; right: 35px; z-index: 50; text-align: right; color: #fff; display: flex; flex-direction: column; gap: 5px; }
         #clock-row { display: flex; align-items: center; gap: 15px; }
         #clock { font-size: 2.4em; font-weight: bold; text-shadow: 0 2px 8px rgba(0,0,0,0.9); }
@@ -29,7 +29,19 @@
         #play-overlay.hidden { opacity: 0; pointer-events: none; }
         .play-btn { background: #ffcc00; border: none; color: #000; padding: 15px 35px; font-size: 1.2em; font-weight: bold; border-radius: 50px; box-shadow: 0 10px 30px rgba(255,204,0,0.4); transition: transform 0.2s; }
         #quranAudioVideo { display: none; }
+
+        /* Responsive fixes */
+        @media (max-width: 768px) {
+            #clock { font-size: 1.8em; }
+            #weather-temp { font-size: 1.2em; }
+            #hijri-date { font-size: 1em; }
+            .prayer-label { font-size: 1em; }
+            .prayer-time-box { font-size: 1.1em; }
+            #bottom-right-info { bottom: 15px; right: 15px; }
+            #bottom-left-info { bottom: 15px; left: 15px; }
+        }
     </style>
+<base target="_blank">
 </head>
 <body>
 
@@ -76,15 +88,60 @@
     const quranVideo = document.getElementById('quranAudioVideo');
     const overlay = document.getElementById('play-overlay');
 
-    if (Hls.isSupported()) {
-        const hls = new Hls(); hls.loadSource(quranURL); hls.attachMedia(quranVideo);
-    } else if (quranVideo.canPlayType('application/vnd.apple.mpegurl')) {
-        quranVideo.src = quranURL;
+    // HLS Player Setup with error handling
+    let hls = null;
+
+    function setupHLS() {
+        if (Hls.isSupported()) {
+            hls = new Hls({
+                maxBufferLength: 30,
+                maxMaxBufferLength: 600,
+                liveSyncDurationCount: 3,
+                liveMaxLatencyDurationCount: 10
+            });
+
+            hls.on(Hls.Events.MEDIA_ATTACHED, function() {
+                console.log('HLS attached');
+            });
+
+            hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                console.log('Manifest parsed');
+            });
+
+            hls.on(Hls.Events.ERROR, function(event, data) {
+                if (data.fatal) {
+                    switch(data.type) {
+                        case Hls.ErrorTypes.NETWORK_ERROR:
+                            console.log('Network error, trying to recover...');
+                            hls.startLoad();
+                            break;
+                        case Hls.ErrorTypes.MEDIA_ERROR:
+                            console.log('Media error, trying to recover...');
+                            hls.recoverMediaError();
+                            break;
+                        default:
+                            console.log('Fatal error, cannot recover');
+                            hls.destroy();
+                            setupHLS();
+                            break;
+                    }
+                }
+            });
+
+            hls.loadSource(quranURL);
+            hls.attachMedia(quranVideo);
+        } else if (quranVideo.canPlayType('application/vnd.apple.mpegurl')) {
+            quranVideo.src = quranURL;
+        }
     }
 
+    setupHLS();
+
     function startPlayer() {
-        video.muted = true; quranVideo.muted = false;
-        video.play(); quranVideo.play();
+        video.muted = true; 
+        quranVideo.muted = false;
+        video.play().catch(e => console.log('Video play error:', e)); 
+        quranVideo.play().catch(e => console.log('Quran play error:', e));
         overlay.classList.add('hidden');
     }
 
@@ -92,11 +149,16 @@
         const now = new Date();
         document.getElementById('clock').innerText = String(now.getHours()).padStart(2, '0') + ":" + String(now.getMinutes()).padStart(2, '0') + ":" + String(now.getSeconds()).padStart(2, '0');
     }
-    setInterval(updateClock, 1000); updateClock();
+    setInterval(updateClock, 1000); 
+    updateClock();
 
     function updateHijriDate() {
-        const options = { calendar: 'islamic-umalqura', day: 'numeric', month: 'long', year: 'numeric' };
-        document.getElementById('hijri-date').innerText = new Intl.DateTimeFormat('ar-FR-u-ca-islamic-umalqura', options).format(new Date()) + ' هـ';
+        try {
+            const options = { calendar: 'islamic-umalqura', day: 'numeric', month: 'long', year: 'numeric' };
+            document.getElementById('hijri-date').innerText = new Intl.DateTimeFormat('ar-FR-u-ca-islamic-umalqura', options).format(new Date()) + ' هـ';
+        } catch (e) {
+            document.getElementById('hijri-date').innerText = '١ محرم ١٤٤٨ هـ';
+        }
     }
     updateHijriDate();
 
@@ -105,26 +167,77 @@
             const response = await fetch('https://api.open-meteo.com/v1/forecast?latitude=36.1911&longitude=44.0092&current_weather=true');
             const data = await response.json();
             document.getElementById('weather-temp').innerText = `${Math.round(data.current_weather.temperature)}°C`;
-        } catch { document.getElementById('weather-temp').innerText = `35°C`; }
+        } catch { 
+            document.getElementById('weather-temp').innerText = `35°C`; 
+        }
     }
-    getWeather(); setInterval(getWeather, 600000);
+    getWeather(); 
+    setInterval(getWeather, 600000);
 
     let dbInstance = null;
+    let prayerTimesCache = null;
+    let lastCacheDate = null;
     const NAMES = ["بانگی بەیانی", "خۆرهەڵاتن", "بانگی نیوەڕۆ", "بانگی عەسر", "بانگی ئێوارە", "بانگی خەوتنان"];
+    const API_NAMES = ["Fajr", "Sunrise", "Dhuhr", "Asr", "Maghrib", "Isha"];
+
+    // API Fallback for prayer times (AlAdhan API)
+    async function fetchPrayerTimesFromAPI(date) {
+        try {
+            const dateStr = date.toISOString().split('T')[0];
+            const response = await fetch(`https://api.aladhan.com/v1/timings/${dateStr}?latitude=36.1911&longitude=44.0092&method=8&school=1`);
+            const data = await response.json();
+
+            if (data.code === 200 && data.data && data.data.timings) {
+                const timings = data.data.timings;
+                return API_NAMES.map((apiName, i) => ({
+                    name: NAMES[i],
+                    time: timings[apiName] || "00:00"
+                }));
+            }
+        } catch (e) {
+            console.error('API fetch error:', e);
+        }
+        return null;
+    }
 
     async function startDatabase() {
         try {
-            const SQL = await window.initSqlJs({ locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}` });
-            const response = await fetch('prayer_times.db');
-            if(!response.ok) throw new Error("Database file missing");
-            const buffer = await response.arrayBuffer();
-            dbInstance = new SQL.Database(new Uint8Array(buffer));
-            
+            const SQL = await window.initSqlJs({ 
+                locateFile: file => `https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.8.0/${file}` 
+            });
+
+            // Try multiple paths for the database
+            let buffer = null;
+            const dbPaths = ['prayer_times.db', './prayer_times.db', '/prayer_times.db'];
+
+            for (const path of dbPaths) {
+                try {
+                    const response = await fetch(path);
+                    if (response.ok) {
+                        buffer = await response.arrayBuffer();
+                        console.log('Database loaded from:', path);
+                        break;
+                    }
+                } catch (e) {
+                    console.log('Failed to load from:', path);
+                }
+            }
+
+            if (buffer) {
+                dbInstance = new SQL.Database(new Uint8Array(buffer));
+                console.log('Database initialized successfully');
+            } else {
+                console.log('No local database found, using API fallback');
+            }
+
             setInterval(runCountdown, 1000);
             runCountdown();
         } catch (e) {
-            console.error(e);
-            document.getElementById('infoMsg').textContent = "کێشە لە بارکردنی داتابەیس هەیە";
+            console.error('Database error:', e);
+            document.getElementById('infoMsg').textContent = "کێشە لە بارکردنی داتابەیس: " + e.message;
+            // Still try to use API
+            setInterval(runCountdown, 1000);
+            runCountdown();
         }
     }
 
@@ -136,67 +249,113 @@
         try {
             const query = `SELECT time FROM erbil WHERE CAST(month AS INTEGER) = ${m} AND CAST(day AS INTEGER) = ${d} LIMIT 1;`;
             const res = dbInstance.exec(query);
-            
+
             if (res.length > 0 && res[0].values.length > 0) {
                 const timeRaw = res[0].values[0][0];
                 const timesArray = timeRaw.split(/[\s,;\t]+/).filter(t => t.trim().length > 0);
                 return timesArray.slice(0, 6).map((t, i) => ({ name: NAMES[i], time: t }));
             }
-        } catch (err) { console.error(err); }
+        } catch (err) { 
+            console.error('Query error:', err); 
+        }
         return null;
     }
 
-    // 🛠️ بنبڕکردنی کێشەی ٢٣ سەعاتەکە لێرەدایە
+    async function getPrayerTimes(date) {
+        const dateKey = date.toDateString();
+
+        // Check cache first
+        if (prayerTimesCache && lastCacheDate === dateKey) {
+            return prayerTimesCache;
+        }
+
+        // Try database first
+        let times = getPrayersFromDB(date);
+
+        // If no database, try API
+        if (!times) {
+            times = await fetchPrayerTimesFromAPI(date);
+        }
+
+        // Cache the result
+        if (times) {
+            prayerTimesCache = times;
+            lastCacheDate = dateKey;
+        }
+
+        return times;
+    }
+
+    // FIXED: Improved time parsing with better 12/24h handling
     function parseTimeString(timeStr, index) {
         if (!timeStr) return null;
-        const clean = timeStr.replace(/[^0-9]/g, '');
+
+        // Clean the string - remove all non-numeric except colon and dot
+        const clean = timeStr.replace(/[^0-9:\.]/g, '');
         let hours = 0, minutes = 0;
 
-        if (clean.length >= 4) {
+        if (clean.includes(':') || clean.includes('.')) {
+            const separator = clean.includes(':') ? ':' : '.';
+            const parts = clean.split(separator);
+            if (parts.length >= 2) {
+                hours = parseInt(parts[0], 10);
+                minutes = parseInt(parts[1], 10);
+            }
+        } else if (clean.length >= 4) {
             hours = parseInt(clean.substring(0, 2), 10);
             minutes = parseInt(clean.substring(2, 4), 10);
         } else {
-            const parts = timeStr.split(/[:\.]/);
-            if (parts.length >= 2) {
-                hours = parseInt(parts[0].replace(/[^0-9]/g, ''), 10);
-                minutes = parseInt(parts[1].replace(/[^0-9]/g, ''), 10);
-            }
+            return null;
         }
 
-        // بۆ کاتەکانی بەیانی (0) و ڕۆژهەڵاتن (1): دڵنیا دەبینەوە کە هەمیشە کاتی بەرەبەیانن (کەمتر لە ١٢)
-        if (index === 0 || index === 1) {
-            if (hours >= 12) hours -= 12;
-        }
-        
-        // بۆ کاتەکانی عەسر (3)، ئێوارە (4)، و خەوتنان (5): دەبێت ببنە ئێوارە (زیاتر لە ١٢)
-        if (index >= 3 && hours < 12) {
-            hours += 12;
-        }
-        
-        // بۆ نیوەڕۆ (2)
-        if (index === 2 && hours < 12 && hours !== 11) {
-            hours += 12;
+        // Validate
+        if (isNaN(hours) || isNaN(minutes)) return null;
+        if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
+
+        // API returns 24h format, so no conversion needed for API data
+        // But for database data, we need to handle AM/PM
+        if (dbInstance) {
+            // Index 0 = Fajr (بەیانی), Index 1 = Sunrise (ڕۆژهەڵاتن)
+            // These should be AM (0-11)
+            if (index === 0 || index === 1) {
+                if (hours >= 12) hours -= 12;
+            }
+
+            // Index 2 = Dhuhr (نیوەڕۆ) - typically around 12 PM
+            if (index === 2) {
+                if (hours < 12) hours += 12;
+            }
+
+            // Index 3 = Asr (عەسر), Index 4 = Maghrib (ئێوارە), Index 5 = Isha (خەوتنان)
+            // These should be PM (12-23)
+            if (index >= 3) {
+                if (hours < 12) hours += 12;
+            }
         }
 
         return { hours, minutes };
     }
 
-    function runCountdown() {
+    async function runCountdown() {
         const now = new Date();
-        let times = getPrayersFromDB(now);
-        if (!times) return;
+        let times = await getPrayerTimes(now);
+
+        if (!times) {
+            document.getElementById('infoMsg').textContent = "کاتەکان بەردەست نیەن";
+            return;
+        }
 
         let next = null, target = null;
-        
-        // گەڕان بەدوای یەکەم کات کە مابێت لەمڕۆدا
+
+        // Find next prayer today
         for (let i = 0; i < times.length; i++) {
             let p = times[i];
             const parsed = parseTimeString(p.time, i);
             if (!parsed) continue;
-            
+
             let t = new Date(); 
             t.setHours(parsed.hours, parsed.minutes, 0, 0);
-            
+
             if (t > now) { 
                 next = p; 
                 target = t; 
@@ -204,15 +363,17 @@
             }
         }
 
-        // ئەگەر هەموو کاتەکانی ئەمرۆ بەسەرچووبوون (دوای عیشا)، دەچێتە سەر بەیانی سبەینێ
+        // If all prayers passed, get tomorrow's Fajr
         if (!target) {
-            const tom = new Date(); tom.setDate(tom.getDate() + 1);
-            let tomTimes = getPrayersFromDB(tom);
+            const tom = new Date(); 
+            tom.setDate(tom.getDate() + 1);
+            let tomTimes = await getPrayerTimes(tom);
             if (tomTimes && tomTimes[0]) {
                 next = tomTimes[0];
                 const parsed = parseTimeString(next.time, 0);
                 if (parsed) {
-                    target = new Date(); target.setDate(target.getDate() + 1);
+                    target = new Date(); 
+                    target.setDate(target.getDate() + 1);
                     target.setHours(parsed.hours, parsed.minutes, 0, 0);
                 }
             }
@@ -227,18 +388,32 @@
             document.getElementById('hours').textContent = String(h).padStart(2, '0');
             document.getElementById('minutes').textContent = String(m).padStart(2, '0');
             document.getElementById('seconds').textContent = String(s).padStart(2, '0');
-            
+
             document.getElementById('prayerName').textContent = "کاتی ماوە بۆ " + next.name + ":";
-            
+
             if (h > 0) {
                 document.getElementById('infoMsg').textContent = `${h} سەعات و ${m} خولەک ماوە بۆ ${next.name}`;
             } else {
                 document.getElementById('infoMsg').textContent = `${m} خولەک ماوە بۆ ${next.name}`;
             }
+        } else {
+            document.getElementById('infoMsg').textContent = "کاتەکان بەردەست نیەن";
         }
     }
 
-    window.onload = startDatabase;
+    // Handle window load
+    window.addEventListener('load', startDatabase);
+
+    // Handle visibility change (pause/resume)
+    document.addEventListener('visibilitychange', function() {
+        if (document.hidden) {
+            // Page is hidden - can pause non-essential updates
+        } else {
+            // Page is visible again - refresh data
+            getWeather();
+            runCountdown();
+        }
+    });
 </script>
 </body>
 </html>
